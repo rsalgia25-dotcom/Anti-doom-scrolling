@@ -139,41 +139,45 @@
     <main class="dashboard-grid">
       <div class="feed-column">
         <h2>📺 Video Channels (Last 48 Hours)</h2>
-        <div id="youtube-feed"><div class="loading">Loading feeds...</div></div>
+        <div id="youtube-feed"><div class="loading">Searching creators...</div></div>
       </div>
 
       <div class="feed-column">
         <h2>🧡 Subreddit Pulses (Top Hot)</h2>
-        <div id="reddit-feed"><div class="loading">Loading feeds...</div></div>
+        <div id="reddit-feed"><div class="loading">Searching local nodes...</div></div>
       </div>
     </main>
   </div>
 
   <script>
-    let totalSeconds = 30 * 60;
-    const timerElement = document.getElementById('countdown-timer');
-    const lockoutScreen = document.getElementById('lockout-screen');
+    // 1. ISOLATED TIMER ENGINE (Failsafe)
+    var totalSeconds = 30 * 60;
+    var timerElement = document.getElementById('countdown-timer');
+    var lockoutScreen = document.getElementById('lockout-screen');
 
     function startDashboardTimer() {
       setInterval(function() {
-        let minutes = Math.floor(totalSeconds / 60);
-        let seconds = totalSeconds % 60;
-        minutes = minutes < 10 ? '0' + minutes : minutes;
-        seconds = seconds < 10 ? '0' + seconds : seconds;
+        if (totalSeconds < 0) return;
+        var minutes = Math.floor(totalSeconds / 60);
+        var seconds = totalSeconds % 60;
+        
+        if (minutes < 10) minutes = '0' + minutes;
+        if (seconds < 10) seconds = '0' + seconds;
 
         timerElement.innerText = minutes + ":" + seconds;
 
         if (totalSeconds <= 300) {
           document.documentElement.style.setProperty('--timer-color', '#ef4444');
         }
-        if (totalSeconds <= 0) {
+        if (totalSeconds === 0) {
           lockoutScreen.style.display = 'flex';
         }
         totalSeconds--;
       }, 1000);
     }
 
-    const deepPhysicsFacts = [
+    // 2. STATIC INTERESTING COGNITIVE FACTS
+    var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
       "The Cosmic Microwave Background is the literal afterglow of the Big Bang, filling all space. Roughly 1% of ancient analog TV static is interference from the birth of the universe.",
@@ -182,45 +186,43 @@
     ];
 
     function renderDailyPhysicsFact() {
-      const currentYearDay = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-      const index = currentYearDay % deepPhysicsFacts.length;
+      var currentYearDay = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+      var index = currentYearDay % deepPhysicsFacts.length;
       document.getElementById('physics-fact').innerText = deepPhysicsFacts[index];
     }
 
-    async function loadSubreddits() {
-      const subreddits = ['thane', 'mumbai', 'StockMarketIndia'];
-      const container = document.getElementById('reddit-feed');
+    // 3. SAFE REDDIT INTERFACE (Asynchronous & Error-Isolated)
+    function loadSubreddits() {
+      var subreddits = ['thane', 'mumbai', 'StockMarketIndia'];
+      var container = document.getElementById('reddit-feed');
       container.innerHTML = ''; 
 
-      for (let i = 0; i < subreddits.length; i++) {
-        const sub = subreddits[i];
-        try {
-          const targetUrl = 'https://reddit.com' + sub + '/hot.json?limit=3';
-          const res = await fetch('https://allorigins.win' + encodeURIComponent(targetUrl));
-          const raw = await res.json();
-          const data = JSON.parse(raw.contents);
-          const posts = data.data.children;
-
-          for (let j = 0; j < posts.length; j++) {
-            const post = posts[j];
-            if (post.data.stickied) continue;
+      subreddits.forEach(function(sub) {
+        // Direct clean JSON fetch without heavy proxies that cause mobile blocks
+        fetch('https://reddit.com' + sub + '/hot.json?limit=4')
+          .then(function(res) { return res.json(); })
+          .then(function(resData) {
+            if (!resData || !resData.data || !resData.data.children) return;
+            var posts = resData.data.children;
             
-            const card = document.createElement('div');
-            card.className = 'content-card';
-            card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-rd">r/' + sub + '</span><span>👤 ' + post.data.author + '</span></div><a href="https://reddit.com' + post.data.permalink + '" target="_blank">' + post.data.title + '</a>';
-            container.appendChild(card);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      if (container.innerHTML === '') {
-        container.innerHTML = '<div class="loading">No recent Reddit updates found.</div>';
-      }
+            posts.forEach(function(post) {
+              if (post.data.stickied) return;
+              var card = document.createElement('div');
+              card.className = 'content-card';
+              card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-rd">r/' + sub + '</span></div><a href="https://reddit.com' + post.data.permalink + '" target="_blank">' + post.data.title + '</a>';
+              container.appendChild(card);
+            });
+          })
+          .catch(function(err) {
+            console.log("Reddit Error for " + sub, err);
+            container.innerHTML += '<div class="loading">⚠️ Failed loading r/' + sub + ' directly.</div>';
+          });
+      });
     }
 
-    async function loadYouTubeCreators() {
-      const creators = [
+    // 4. SAFE YOUTUBE PIPELINE (Asynchronous & Error-Isolated)
+    function loadYouTubeCreators() {
+      var creators = [
         { name: 'Markets With Jayant', id: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
         { name: 'Peek TV', id: 'UCvXU-vS_Zc8mH_mP7fOnw8A' },
         { name: 'Cleo Abram', id: 'UC-Sg5EdfH9WpXFYG_Z_Mwtw' },
@@ -230,36 +232,28 @@
         { name: 'Vox', id: 'UC3xtz7vX_hIFNVyWhp07BfA' }
       ];
 
-      const container = document.getElementById('youtube-feed');
+      var container = document.getElementById('youtube-feed');
       container.innerHTML = '';
 
-      const NOW = new Date().getTime();
-      const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000; 
+      var NOW = new Date().getTime();
+      var FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+      var foundVideos = 0;
 
-      for (let i = 0; i < creators.length; i++) {
-        const creator = creators[i];
-        try {
-          const feedUrl = 'https://youtube.com' + creator.id;
-          const apiRes = await fetch('https://rss2json.com' + encodeURIComponent(feedUrl));
-          const data = await apiRes.json();
+      creators.forEach(function(creator) {
+        var feedUrl = 'https://youtube.com' + creator.id;
+        
+        // Using an open fallback converter that bypasses standard rate throttling limits
+        fetch('https://rss2json.com' + encodeURIComponent(feedUrl))
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.status === 'ok' && data.items && data.items.length > 0) {
+              // Review the latest 3 items uploaded by the creator
+              for (var k = 0; k < Math.min(data.items.length, 3); k++) {
+                var video = data.items[k];
+                var videoDate = new Date(video.pubDate.getTime ? video.pubDate.getTime() : video.pubDate.replace(/-/g, "/")).getTime();
+                var timeDifference = NOW - videoDate;
 
-          if (data.status === 'ok' && data.items && data.items.length > 0) {
-            // Loop through up to 3 latest videos to find anything in the last 48 hours
-            for (let k = 0; k < Math.min(data.items.length, 3); k++) {
-              const video = data.items[k];
-              const videoDate = new Date(video.pubDate).getTime();
-              const timeDifference = NOW - videoDate;
-
-              if (timeDifference <= FORTY_EIGHT_HOURS_MS) {
-                const card = document.createElement('div');
-                card.className = 'content-card';
-                card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + creator.name + '</span> <span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div><a href="' + video.link + '" target="_blank">' + video.title + '</a>';
-                container.appendChild(card);
-              }
-            }
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-      if (container.innerHTML === '') {
+                if (timeDifference <= FORTY_EIGHT_HOURS_MS) {
+                  foundVideos++;
+                  var card = document.createElement('div');
+                  card.className = 'content-card';

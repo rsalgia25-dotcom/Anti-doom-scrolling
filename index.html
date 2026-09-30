@@ -150,7 +150,7 @@
   </div>
 
   <script>
-    // 1. ISOLATED TIMER ENGINE (Failsafe)
+    // 1. COMPLETELY ISOLATED SAFETY COUNTDOWN
     var totalSeconds = 30 * 60;
     var timerElement = document.getElementById('countdown-timer');
     var lockoutScreen = document.getElementById('lockout-screen');
@@ -161,10 +161,10 @@
         var minutes = Math.floor(totalSeconds / 60);
         var seconds = totalSeconds % 60;
         
-        if (minutes < 10) minutes = '0' + minutes;
-        if (seconds < 10) seconds = '0' + seconds;
+        var minStr = minutes < 10 ? '0' + minutes : '' + minutes;
+        var secStr = seconds < 10 ? '0' + seconds : '' + seconds;
 
-        timerElement.innerText = minutes + ":" + seconds;
+        timerElement.innerText = minStr + ":" + secStr;
 
         if (totalSeconds <= 300) {
           document.documentElement.style.setProperty('--timer-color', '#ef4444');
@@ -176,7 +176,7 @@
       }, 1000);
     }
 
-    // 2. STATIC INTERESTING COGNITIVE FACTS
+    // 2. TIMEOUT-PROOF STATIC PHYSICS spark entries
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -191,36 +191,42 @@
       document.getElementById('physics-fact').innerText = deepPhysicsFacts[index];
     }
 
-    // 3. SAFE REDDIT INTERFACE (Asynchronous & Error-Isolated)
+    // 3. SAFE REDDIT SCRAPER NODES
     function loadSubreddits() {
       var subreddits = ['thane', 'mumbai', 'StockMarketIndia'];
       var container = document.getElementById('reddit-feed');
       container.innerHTML = ''; 
 
       subreddits.forEach(function(sub) {
-        // Direct clean JSON fetch without heavy proxies that cause mobile blocks
-        fetch('https://reddit.com' + sub + '/hot.json?limit=4')
+        var subUrl = 'https://reddit.com' + sub + '/hot.json?limit=4';
+        fetch('https://allorigins.win' + encodeURIComponent(subUrl))
           .then(function(res) { return res.json(); })
-          .then(function(resData) {
-            if (!resData || !resData.data || !resData.data.children) return;
-            var posts = resData.data.children;
+          .then(function(raw) {
+            var data = JSON.parse(raw.contents);
+            if (!data || !data.data || !data.data.children) return;
+            var posts = data.data.children;
             
             posts.forEach(function(post) {
               if (post.data.stickied) return;
               var card = document.createElement('div');
               card.className = 'content-card';
-              card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-rd">r/' + sub + '</span></div><a href="https://reddit.com' + post.data.permalink + '" target="_blank">' + post.data.title + '</a>';
+              
+              var inner = '<div class="meta-row" style="margin-bottom:6px;">';
+              inner += '<span class="tag tag-rd">r/' + sub + '</span>';
+              inner += '<span>👤 ' + post.data.author + '</span></div>';
+              inner += '<a href="https://reddit.com' + post.data.permalink + '" target="_blank">' + post.data.title + '</a>';
+              
+              card.innerHTML = inner;
               container.appendChild(card);
             });
           })
           .catch(function(err) {
-            console.log("Reddit Error for " + sub, err);
-            container.innerHTML += '<div class="loading">⚠️ Failed loading r/' + sub + ' directly.</div>';
+            console.log(err);
           });
       });
     }
 
-    // 4. SAFE YOUTUBE PIPELINE (Asynchronous & Error-Isolated)
+    // 4. SAFE 48-HOUR YOUTUBE TIMELINE SCANNER
     function loadYouTubeCreators() {
       var creators = [
         { name: 'Markets With Jayant', id: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
@@ -234,26 +240,27 @@
 
       var container = document.getElementById('youtube-feed');
       container.innerHTML = '';
-
       var NOW = new Date().getTime();
       var FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
-      var foundVideos = 0;
+      var totalFound = 0;
 
       creators.forEach(function(creator) {
         var feedUrl = 'https://youtube.com' + creator.id;
-        
-        // Using an open fallback converter that bypasses standard rate throttling limits
         fetch('https://rss2json.com' + encodeURIComponent(feedUrl))
           .then(function(res) { return res.json(); })
           .then(function(data) {
             if (data.status === 'ok' && data.items && data.items.length > 0) {
-              // Review the latest 3 items uploaded by the creator
               for (var k = 0; k < Math.min(data.items.length, 3); k++) {
                 var video = data.items[k];
-                var videoDate = new Date(video.pubDate.getTime ? video.pubDate.getTime() : video.pubDate.replace(/-/g, "/")).getTime();
+                // Failsafe text parsing for cross-browser date layout conversion
+                var dateStr = video.pubDate.replace(/-/g, "/");
+                var videoDate = new Date(dateStr).getTime();
                 var timeDifference = NOW - videoDate;
 
                 if (timeDifference <= FORTY_EIGHT_HOURS_MS) {
-                  foundVideos++;
+                  totalFound++;
                   var card = document.createElement('div');
                   card.className = 'content-card';
+                  
+                  var inner = '<div class="meta-row" style="margin-bottom:6px;">';
+                  inner += '<span class="tag tag-yt">' + creator.name + '</span>';

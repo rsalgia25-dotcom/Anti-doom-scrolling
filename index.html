@@ -150,7 +150,7 @@
   </div>
 
   <script>
-    // 1. DYNAMIC RUNNING TIMER ENGINE
+    // 1. TIMEOUT-PROOF STATIC PHYSICS ENGINE
     var totalSeconds = 1800;
     var timerBox = document.getElementById('countdown-timer');
     var overlay = document.getElementById('lockout-screen');
@@ -177,7 +177,7 @@
     // Fire timer array loop immediately to avoid layout blocks
     setInterval(tick, 1000);
 
-    // 2. INTERESTING PHYSICS FACTS
+    // 2. TIMEOUT-PROOF STATIC PHYSICS spark entries
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -200,10 +200,9 @@
       box.innerHTML = '';
 
       subs.forEach(function(subName) {
-        var u = 'https://www.reddit.com/r/' + subName + '/hot.json?limit=4';
+        var u = 'https://reddit.com' + subName + '/hot.json?limit=4';
         
-        // Funneled through an open JSON interface bridge to remove cross-origin headers blocks on live sites
-        fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(u))
+        fetch('https://allorigins.win' + encodeURIComponent(u))
           .then(function(r) { return r.json(); })
           .then(function(j) {
             var parsed = JSON.parse(j.contents);
@@ -228,7 +227,7 @@
       });
     }
 
-    // 4. CLEAN JSON-BASED YOUTUBE PARSER (48h Filtering Window Engine)
+    // 4. CLEAN YOUTUBE SCANNER (48h Filtering Window Engine)
     function runYouTube() {
       var channels = [
         { name: 'Markets With Jayant', cid: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
@@ -266,3 +265,5 @@
                   var ytCardHtml = '<div class="meta-row" style="margin-bottom:6px;">';
                   ytCardHtml += '<span class="tag tag-yt">' + ch.name + '</span>';
                   ytCardHtml += '<span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div>';
+                  ytCardHtml += '<a href="' + vid.link + '" target="_blank">' + vid.title + '</a>';
+                  

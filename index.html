@@ -150,7 +150,7 @@
   </div>
 
   <script>
-    // 1. ABSOLUTE BASIC TIMER ENGINE
+    // 1. DYNAMIC RUNNING TIMER ENGINE
     var totalSeconds = 1800;
     var timerBox = document.getElementById('countdown-timer');
     var overlay = document.getElementById('lockout-screen');
@@ -174,7 +174,10 @@
       totalSeconds--;
     }
 
-    // 2. STABLE FACTS
+    // Start timer looping instantly before doing anything else
+    setInterval(tick, 1000);
+
+    // 2. TIMEOUT-PROOF STATIC PHYSICS spark entries
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -188,8 +191,9 @@
       var idx = d % deepPhysicsFacts.length;
       document.getElementById('physics-fact').innerText = deepPhysicsFacts[idx];
     }
+    showFact();
 
-    // 3. SECURE REDDIT FEEDS
+    // 3. SAFE REDDIT INTERFACE (Funneled through AllOrigins Proxy to bypass API block)
     function runReddit() {
       var subs = ['thane', 'mumbai', 'StockMarketIndia'];
       var box = document.getElementById('reddit-feed');
@@ -214,7 +218,7 @@
       });
     }
 
-    // 4. SECURE YOUTUBE AGGREGATION
+    // 4. SAFE 48-HOUR YOUTUBE TIMELINE SCANNER
     function runYouTube() {
       var channels = [
         { name: 'Markets With Jayant', cid: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
@@ -234,42 +238,31 @@
 
       channels.forEach(function(ch) {
         var u = 'https://youtube.com' + ch.cid;
-        fetch('https://rss2json.com' + encodeURIComponent(u))
+        fetch('https://allorigins.win' + encodeURIComponent(u))
           .then(function(r) { return r.json(); })
           .then(function(j) {
-            if (j.status === 'ok' && j.items) {
-              for (var i = 0; i < Math.min(j.items.length, 3); i++) {
-                var vid = j.items[i];
-                var cleanDateStr = vid.pubDate.replace(/-/g, "/");
-                var vTs = new Date(cleanDateStr).getTime();
-                
-                if ((tsNow - vTs) <= maxAge) {
-                  found++;
-                  var el = document.createElement('div');
-                  el.className = 'content-card';
-                  el.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + ch.name + '</span><span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div><a href="' + vid.link + '" target="_blank">' + vid.title + '</a>';
-                  box.appendChild(el);
-                }
+            // AllOrigins wraps the XML text inside j.contents
+            var parser = new DOMParser();
+            var xmlDoc = parser.parseFromString(j.contents, "text/xml");
+            var entries = xmlDoc.getElementsByTagName("entry");
+
+            for (var i = 0; i < Math.min(entries.length, 3); i++) {
+              var entry = entries[i];
+              var title = entry.getElementsByTagName("title")[0].textContent;
+              var link = entry.getElementsByTagName("link")[0].getAttribute("href");
+              var published = entry.getElementsByTagName("published")[0].textContent;
+              
+              var vTs = new Date(published).getTime();
+              
+              if ((tsNow - vTs) <= maxAge) {
+                found++;
+                var el = document.createElement('div');
+                el.className = 'content-card';
+                el.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + ch.name + '</span><span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div><a href="' + link + '" target="_blank">' + title + '</a>';
+                box.appendChild(el);
               }
             }
           })
           .catch(function(err) { console.log(err); });
       });
 
-      setTimeout(function() {
-        if (box.innerHTML === '' || found === 0) {
-          box.innerHTML = '<div class="loading">None of your creators uploaded in the last 48 hours. Sweet dreams! 🌙</div>';
-        }
-      }, 3500);
-    }
-
-    // 5. BOOT INJECTION
-    setInterval(tick, 1000);
-    showFact();
-    
-    // Load network resources asynchronously 
-    setTimeout(runReddit, 100);
-    setTimeout(runYouTube, 200);
-  </script>
-</body>
-</html>

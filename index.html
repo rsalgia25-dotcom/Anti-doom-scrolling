@@ -133,7 +133,7 @@
 
     <section class="physics-panel">
       <h3>🌌 Tonight's Physics Spark</h3>
-      <div class="physics-text" id="physics-fact">Loading curiosity prompt...</div>
+      <div class="physics-text" id="physics-fact">Pondering the cosmos...</div>
     </section>
 
     <main class="dashboard-grid">
@@ -150,33 +150,31 @@
   </div>
 
   <script>
-    // 1. COMPLETELY ISOLATED SAFETY COUNTDOWN
-    var totalSeconds = 30 * 60;
-    var timerElement = document.getElementById('countdown-timer');
-    var lockoutScreen = document.getElementById('lockout-screen');
+    // 1. ABSOLUTE BASIC TIMER ENGINE
+    var totalSeconds = 1800;
+    var timerBox = document.getElementById('countdown-timer');
+    var overlay = document.getElementById('lockout-screen');
 
-    function startDashboardTimer() {
-      setInterval(function() {
-        if (totalSeconds < 0) return;
-        var minutes = Math.floor(totalSeconds / 60);
-        var seconds = totalSeconds % 60;
-        
-        var minStr = minutes < 10 ? '0' + minutes : '' + minutes;
-        var secStr = seconds < 10 ? '0' + seconds : '' + seconds;
+    function tick() {
+      if (totalSeconds < 0) return;
+      var m = Math.floor(totalSeconds / 60);
+      var s = totalSeconds % 60;
+      
+      var mStr = (m < 10) ? '0' + m : '' + m;
+      var sStr = (s < 10) ? '0' + s : '' + s;
 
-        timerElement.innerText = minStr + ":" + secStr;
+      timerBox.innerText = mStr + ':' + sStr;
 
-        if (totalSeconds <= 300) {
-          document.documentElement.style.setProperty('--timer-color', '#ef4444');
-        }
-        if (totalSeconds === 0) {
-          lockoutScreen.style.display = 'flex';
-        }
-        totalSeconds--;
-      }, 1000);
+      if (totalSeconds <= 300) {
+        document.documentElement.style.setProperty('--timer-color', '#ef4444');
+      }
+      if (totalSeconds === 0) {
+        overlay.style.display = 'flex';
+      }
+      totalSeconds--;
     }
 
-    // 2. TIMEOUT-PROOF STATIC PHYSICS spark entries
+    // 2. STABLE FACTS
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -185,82 +183,93 @@
       "Entangled particles mirror each other instantly across light-years. Einstein called this 'spooky action at a distance', where changing one immediately dictates the state of its paired twin."
     ];
 
-    function renderDailyPhysicsFact() {
-      var currentYearDay = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-      var index = currentYearDay % deepPhysicsFacts.length;
-      document.getElementById('physics-fact').innerText = deepPhysicsFacts[index];
+    function showFact() {
+      var d = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+      var idx = d % deepPhysicsFacts.length;
+      document.getElementById('physics-fact').innerText = deepPhysicsFacts[idx];
     }
 
-    // 3. SAFE REDDIT SCRAPER NODES
-    function loadSubreddits() {
-      var subreddits = ['thane', 'mumbai', 'StockMarketIndia'];
-      var container = document.getElementById('reddit-feed');
-      container.innerHTML = ''; 
+    // 3. SECURE REDDIT FEEDS
+    function runReddit() {
+      var subs = ['thane', 'mumbai', 'StockMarketIndia'];
+      var box = document.getElementById('reddit-feed');
+      box.innerHTML = '';
 
-      subreddits.forEach(function(sub) {
-        var subUrl = 'https://reddit.com' + sub + '/hot.json?limit=4';
-        fetch('https://allorigins.win' + encodeURIComponent(subUrl))
-          .then(function(res) { return res.json(); })
-          .then(function(raw) {
-            var data = JSON.parse(raw.contents);
-            if (!data || !data.data || !data.data.children) return;
-            var posts = data.data.children;
-            
-            posts.forEach(function(post) {
-              if (post.data.stickied) return;
-              var card = document.createElement('div');
-              card.className = 'content-card';
-              
-              var inner = '<div class="meta-row" style="margin-bottom:6px;">';
-              inner += '<span class="tag tag-rd">r/' + sub + '</span>';
-              inner += '<span>👤 ' + post.data.author + '</span></div>';
-              inner += '<a href="https://reddit.com' + post.data.permalink + '" target="_blank">' + post.data.title + '</a>';
-              
-              card.innerHTML = inner;
-              container.appendChild(card);
+      subs.forEach(function(subName) {
+        var u = 'https://reddit.com' + subName + '/hot.json?limit=4';
+        fetch('https://allorigins.win' + encodeURIComponent(u))
+          .then(function(r) { return r.json(); })
+          .then(function(j) {
+            var parsed = JSON.parse(j.contents);
+            var items = parsed.data.children;
+            items.forEach(function(item) {
+              if (item.data.stickied) return;
+              var el = document.createElement('div');
+              el.className = 'content-card';
+              el.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-rd">r/' + subName + '</span><span>👤 ' + item.data.author + '</span></div><a href="https://reddit.com' + item.data.permalink + '" target="_blank">' + item.data.title + '</a>';
+              box.appendChild(el);
             });
           })
-          .catch(function(err) {
-            console.log(err);
-          });
+          .catch(function(err) { console.log(err); });
       });
     }
 
-    // 4. SAFE 48-HOUR YOUTUBE TIMELINE SCANNER
-    function loadYouTubeCreators() {
-      var creators = [
-        { name: 'Markets With Jayant', id: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
-        { name: 'Peek TV', id: 'UCvXU-vS_Zc8mH_mP7fOnw8A' },
-        { name: 'Cleo Abram', id: 'UC-Sg5EdfH9WpXFYG_Z_Mwtw' },
-        { name: 'Spiritualbee', id: 'UCCf_p-O7Xid4p_TbygHofHw' },
-        { name: 'PowerTrain', id: 'UC6z836F8y4gXp_qJ4t-Nq7Q' },
-        { name: 'Mohak Mangal', id: 'UC7O0_K878C3L9nZcda56G_A' },
-        { name: 'Vox', id: 'UC3xtz7vX_hIFNVyWhp07BfA' }
+    // 4. SECURE YOUTUBE AGGREGATION
+    function runYouTube() {
+      var channels = [
+        { name: 'Markets With Jayant', cid: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
+        { name: 'Peek TV', cid: 'UCvXU-vS_Zc8mH_mP7fOnw8A' },
+        { name: 'Cleo Abram', cid: 'UC-Sg5EdfH9WpXFYG_Z_Mwtw' },
+        { name: 'Spiritualbee', cid: 'UCCf_p-O7Xid4p_TbygHofHw' },
+        { name: 'PowerTrain', cid: 'UC6z836F8y4gXp_qJ4t-Nq7Q' },
+        { name: 'Mohak Mangal', cid: 'UC7O0_K878C3L9nZcda56G_A' },
+        { name: 'Vox', cid: 'UC3xtz7vX_hIFNVyWhp07BfA' }
       ];
 
-      var container = document.getElementById('youtube-feed');
-      container.innerHTML = '';
-      var NOW = new Date().getTime();
-      var FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
-      var totalFound = 0;
+      var box = document.getElementById('youtube-feed');
+      box.innerHTML = '';
+      var tsNow = new Date().getTime();
+      var maxAge = 48 * 60 * 60 * 1000;
+      var found = 0;
 
-      creators.forEach(function(creator) {
-        var feedUrl = 'https://youtube.com' + creator.id;
-        fetch('https://rss2json.com' + encodeURIComponent(feedUrl))
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            if (data.status === 'ok' && data.items && data.items.length > 0) {
-              for (var k = 0; k < Math.min(data.items.length, 3); k++) {
-                var video = data.items[k];
-                // Failsafe text parsing for cross-browser date layout conversion
-                var dateStr = video.pubDate.replace(/-/g, "/");
-                var videoDate = new Date(dateStr).getTime();
-                var timeDifference = NOW - videoDate;
+      channels.forEach(function(ch) {
+        var u = 'https://youtube.com' + ch.cid;
+        fetch('https://rss2json.com' + encodeURIComponent(u))
+          .then(function(r) { return r.json(); })
+          .then(function(j) {
+            if (j.status === 'ok' && j.items) {
+              for (var i = 0; i < Math.min(j.items.length, 3); i++) {
+                var vid = j.items[i];
+                var cleanDateStr = vid.pubDate.replace(/-/g, "/");
+                var vTs = new Date(cleanDateStr).getTime();
+                
+                if ((tsNow - vTs) <= maxAge) {
+                  found++;
+                  var el = document.createElement('div');
+                  el.className = 'content-card';
+                  el.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + ch.name + '</span><span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div><a href="' + vid.link + '" target="_blank">' + vid.title + '</a>';
+                  box.appendChild(el);
+                }
+              }
+            }
+          })
+          .catch(function(err) { console.log(err); });
+      });
 
-                if (timeDifference <= FORTY_EIGHT_HOURS_MS) {
-                  totalFound++;
-                  var card = document.createElement('div');
-                  card.className = 'content-card';
-                  
-                  var inner = '<div class="meta-row" style="margin-bottom:6px;">';
-                  inner += '<span class="tag tag-yt">' + creator.name + '</span>';
+      setTimeout(function() {
+        if (box.innerHTML === '' || found === 0) {
+          box.innerHTML = '<div class="loading">None of your creators uploaded in the last 48 hours. Sweet dreams! 🌙</div>';
+        }
+      }, 3500);
+    }
+
+    // 5. BOOT INJECTION
+    setInterval(tick, 1000);
+    showFact();
+    
+    // Load network resources asynchronously 
+    setTimeout(runReddit, 100);
+    setTimeout(runYouTube, 200);
+  </script>
+</body>
+</html>

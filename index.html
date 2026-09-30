@@ -234,7 +234,7 @@
       container.innerHTML = '';
 
       const NOW = new Date().getTime();
-      const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000; // 2 Days window
+      const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000; 
 
       for (let i = 0; i < creators.length; i++) {
         const creator = creators[i];
@@ -244,17 +244,18 @@
           const data = await apiRes.json();
 
           if (data.status === 'ok' && data.items && data.items.length > 0) {
-            const latestVideo = data.items[0]; // CRITICAL SCRIPT ARRAY EXTRACTION FIX
-            
-            const videoDate = new Date(latestVideo.pubDate).getTime();
-            const timeDifference = NOW - videoDate;
+            // Loop through up to 3 latest videos to find anything in the last 48 hours
+            for (let k = 0; k < Math.min(data.items.length, 3); k++) {
+              const video = data.items[k];
+              const videoDate = new Date(video.pubDate).getTime();
+              const timeDifference = NOW - videoDate;
 
-            // Only filter and render items uploaded within the last 48 hours
-            if (timeDifference <= FORTY_EIGHT_HOURS_MS) {
-              const card = document.createElement('div');
-              card.className = 'content-card';
-              card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + creator.name + '</span> <span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div><a href="' + latestVideo.link + '" target="_blank">' + latestVideo.title + '</a>';
-              container.appendChild(card);
+              if (timeDifference <= FORTY_EIGHT_HOURS_MS) {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + creator.name + '</span> <span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div><a href="' + video.link + '" target="_blank">' + video.title + '</a>';
+                container.appendChild(card);
+              }
             }
           }
         } catch (err) {

@@ -150,7 +150,6 @@
   </div>
 
   <script>
-    // 1. ISOLATED TIMER ENGINE
     let totalSeconds = 30 * 60;
     const timerElement = document.getElementById('countdown-timer');
     const lockoutScreen = document.getElementById('lockout-screen');
@@ -162,7 +161,7 @@
         minutes = minutes < 10 ? '0' + minutes : minutes;
         seconds = seconds < 10 ? '0' + seconds : seconds;
 
-        timerElement.innerText = `${minutes}:${seconds}`;
+        timerElement.innerText = minutes + ":" + seconds;
 
         if (totalSeconds <= 300) {
           document.documentElement.style.setProperty('--timer-color', '#ef4444');
@@ -174,7 +173,6 @@
       }, 1000);
     }
 
-    // 2. PHYSICS DATA
     const deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -189,7 +187,6 @@
       document.getElementById('physics-fact').innerText = deepPhysicsFacts[index];
     }
 
-    // 3. PROTECTED FEEDS MANAGEMENT
     async function loadSubreddits() {
       const subreddits = ['thane', 'mumbai', 'StockMarketIndia'];
       const container = document.getElementById('reddit-feed');
@@ -197,8 +194,7 @@
 
       for (const sub of subreddits) {
         try {
-          // Bypasses local origin limits using a secure text-based public mirror
-          const res = await fetch(`https://allorigins.win{encodeURIComponent(`https://reddit.com{sub}/hot.json?limit=3`)}`);
+          const res = await fetch(`https://allorigins.win{encodeURIComponent(`https://reddit.com\${sub}/hot.json?limit=3`)}`);
           const raw = await res.json();
           const data = JSON.parse(raw.contents);
           const posts = data.data.children;
@@ -217,7 +213,7 @@
             container.appendChild(card);
           });
         } catch (e) {
-          container.innerHTML += `<div class="loading">⚠️ Connect to the internet or host online to view r/${sub}</div>`;
+          container.innerHTML += `<div class="loading">⚠️ Feed issue for r/${sub}</div>`;
         }
       }
     }
@@ -242,7 +238,7 @@
           const data = await apiRes.json();
 
           if (data.status === 'ok' && data.items && data.items.length > 0) {
-            const latestVideo = data.items[0]; // Fix array selection issue
+            const latestVideo = data.items[0]; // Fixed array extraction bug
             const card = document.createElement('div');
             card.className = 'content-card';
             card.innerHTML = `
@@ -259,7 +255,12 @@
       }
     }
 
-    // 4. GUARANTEED SEQUENTIAL START
     window.onload = function() {
       startDashboardTimer();
       renderDailyPhysicsFact();
+      loadSubreddits();
+      loadYouTubeCreators();
+    };
+  </script>
+</body>
+</html>

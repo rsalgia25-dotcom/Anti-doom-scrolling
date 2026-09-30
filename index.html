@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Curated Nightly Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #151f32;
+      --text: #cbd5e1;
+      --heading: #f8fafc;
+      --accent: #38bdf8;
+      --youtube: #ef4444;
+      --reddit: #f97316;
+      --timer-color: #10b981;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 15px;
+      line-height: 1.5;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding-bottom: 60px; }
+    
+    .top-bar {
+      position: sticky;
+      top: 0;
+      background: rgba(11, 15, 25, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 10px 0;
+      z-index: 100;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    .top-bar h1 { font-size: 1.2rem; color: var(--heading); margin: 0; }
+    .timer-box {
+      background: #111827;
+      border: 1px solid var(--timer-color);
+      color: var(--timer-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-family: monospace;
+      font-size: 1.1rem;
+    }
+
+    .physics-panel {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-left: 5px solid var(--accent);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    .physics-panel h3 { margin-top: 0; color: var(--accent); font-size: 1.1rem; margin-bottom: 8px; }
+    .physics-text { font-size: 1.1rem; color: var(--heading); font-weight: 500; }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 850px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    
+    .feed-column {
+      background-color: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .feed-column h2 { 
+      color: var(--heading); 
+      border-bottom: 2px solid #1e293b; 
+      padding-bottom: 10px; 
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    
+    .content-card {
+      background: #1e293b;
+      padding: 14px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    .content-card a { color: var(--heading); text-decoration: none; font-weight: 600; font-size: 1rem; display: block; margin-bottom: 6px; }
+    .content-card a:hover { color: var(--accent); }
+    
+    .meta-row { display: flex; gap: 10px; align-items: center; font-size: 0.8rem; color: #94a3b8; }
+    .tag {
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #fff;
+      font-weight: bold;
+      font-size: 0.7rem;
+    }
+    .tag-yt { background-color: var(--youtube); }
+    .tag-rd { background-color: var(--reddit); }
+    .loading { color: #64748b; font-style: italic; padding: 10px; font-size: 0.9rem; }
+
+    #lockout-screen {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #070a12;
+      z-index: 9999;
+      color: #ef4444;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+    }
+    #lockout-screen h2 { font-size: 2rem; margin-bottom: 10px; }
+    #lockout-screen p { color: #94a3b8; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <div id="lockout-screen">
+    <h2>⏰ Time's Up!</h2>
+    <p>Your 30 minutes are over. Put the phone away and get some sleep.</p>
+  </div>
+
+  <div class="container" id="main-content">
+    <div class="top-bar">
+      <h1>🌙 Wind-Down Hub</h1>
+      <div class="timer-box" id="countdown-timer">30:00</div>
+    </div>
+
+    <section class="physics-panel">
+      <h3>🌌 Tonight's Physics Spark</h3>
+      <div class="physics-text" id="physics-fact">Loading curiosity prompt...</div>
+    </section>
+
+    <main class="dashboard-grid">
+      <div class="feed-column">
+        <h2>📺 Video Channels (Latest Releases)</h2>
+        <div id="youtube-feed"><div class="loading">Loading feeds...</div></div>
+      </div>
+
+      <div class="feed-column">
+        <h2>🧡 Subreddit Pulses (Top Hot)</h2>
+        <div id="reddit-feed"><div class="loading">Loading feeds...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 1. ISOLATED TIMER ENGINE
+    let totalSeconds = 30 * 60;
+    const timerElement = document.getElementById('countdown-timer');
+    const lockoutScreen = document.getElementById('lockout-screen');
+
+    function startDashboardTimer() {
+      setInterval(() => {
+        let minutes = Math.floor(totalSeconds / 60);
+        let seconds = totalSeconds % 60;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+
+        timerElement.innerText = `${minutes}:${seconds}`;
+
+        if (totalSeconds <= 300) {
+          document.documentElement.style.setProperty('--timer-color', '#ef4444');
+        }
+        if (totalSeconds <= 0) {
+          lockoutScreen.style.display = 'flex';
+        }
+        totalSeconds--;
+      }, 1000);
+    }
+
+    // 2. PHYSICS DATA
+    const deepPhysicsFacts = [
+      "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
+      "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
+      "The Cosmic Microwave Background is the literal afterglow of the Big Bang, filling all space. Roughly 1% of ancient analog TV static is interference from the birth of the universe.",
+      "A single teaspoon of a Neutron Star would weigh roughly 6 billion tons on Earth. They are the collapsed iron cores of supergiant stars compressed down to the size of a single city.",
+      "Entangled particles mirror each other instantly across light-years. Einstein called this 'spooky action at a distance', where changing one immediately dictates the state of its paired twin."
+    ];
+
+    function renderDailyPhysicsFact() {
+      const currentYearDay = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+      const index = currentYearDay % deepPhysicsFacts.length;
+      document.getElementById('physics-fact').innerText = deepPhysicsFacts[index];
+    }
+
+    // 3. PROTECTED FEEDS MANAGEMENT
+    async function loadSubreddits() {
+      const subreddits = ['thane', 'mumbai', 'StockMarketIndia'];
+      const container = document.getElementById('reddit-feed');
+      container.innerHTML = ''; 
+
+      for (const sub of subreddits) {
+        try {
+          // Bypasses local origin limits using a secure text-based public mirror
+          const res = await fetch(`https://allorigins.win{encodeURIComponent(`https://reddit.com{sub}/hot.json?limit=3`)}`);
+          const raw = await res.json();
+          const data = JSON.parse(raw.contents);
+          const posts = data.data.children;
+
+          posts.forEach(post => {
+            if (post.data.stickied) return;
+            const card = document.createElement('div');
+            card.className = 'content-card';
+            card.innerHTML = `
+              <div class="meta-row" style="margin-bottom:6px;">
+                <span class="tag tag-rd">r/${sub}</span>
+                <span>👤 ${post.data.author}</span>
+              </div>
+              <a href="https://reddit.com${post.data.permalink}" target="_blank">${post.data.title}</a>
+            `;
+            container.appendChild(card);
+          });
+        } catch (e) {
+          container.innerHTML += `<div class="loading">⚠️ Connect to the internet or host online to view r/${sub}</div>`;
+        }
+      }
+    }
+
+    async function loadYouTubeCreators() {
+      const creators = [
+        { name: 'Markets With Jayant', feedUrl: 'https://youtube.com' },
+        { name: 'Peek TV', feedUrl: 'https://youtube.com' },
+        { name: 'Cleo Abram', feedUrl: 'https://youtube.com' },
+        { name: 'Spiritualbee', feedUrl: 'https://youtube.com' },
+        { name: 'PowerTrain', feedUrl: 'https://youtube.com' },
+        { name: 'Mohak Mangal', feedUrl: 'https://youtube.com' },
+        { name: 'Vox', feedUrl: 'https://youtube.com' }
+      ];
+
+      const container = document.getElementById('youtube-feed');
+      container.innerHTML = '';
+
+      for (const creator of creators) {
+        try {
+          const apiRes = await fetch(`https://rss2json.com{encodeURIComponent(creator.feedUrl)}`);
+          const data = await apiRes.json();
+
+          if (data.status === 'ok' && data.items && data.items.length > 0) {
+            const latestVideo = data.items[0]; // Fix array selection issue
+            const card = document.createElement('div');
+            card.className = 'content-card';
+            card.innerHTML = `
+              <div class="meta-row" style="margin-bottom:6px;">
+                <span class="tag tag-yt">${creator.name}</span>
+              </div>
+              <a href="${latestVideo.link}" target="_blank">${latestVideo.title}</a>
+            `;
+            container.appendChild(card);
+          }
+        } catch (err) {
+          container.innerHTML += `<div class="loading">⚠️ Feed issue for ${creator.name}</div>`;
+        }
+      }
+    }
+
+    // 4. GUARANTEED SEQUENTIAL START
+    window.onload = function() {
+      startDashboardTimer();
+      renderDailyPhysicsFact();

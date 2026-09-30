@@ -13,7 +13,6 @@
       --accent: #38bdf8;
       --youtube: #ef4444;
       --reddit: #f97316;
-      --timer-color: #10b981;
     }
     body {
       background-color: var(--bg);
@@ -41,8 +40,8 @@
     .top-bar h1 { font-size: 1.2rem; color: var(--heading); margin: 0; }
     .timer-box {
       background: #111827;
-      border: 1px solid var(--timer-color);
-      color: var(--timer-color);
+      border: 1px solid #10b981;
+      color: #10b981;
       padding: 6px 14px;
       border-radius: 20px;
       font-weight: bold;
@@ -133,7 +132,7 @@
 
     <section class="physics-panel">
       <h3>🌌 Tonight's Physics Spark</h3>
-      <div class="physics-text" id="physics-fact">Loading tonight's anomaly...</div>
+      <div class="physics-text" id="physics-fact">Loading anomaly panel...</div>
     </section>
 
     <main class="dashboard-grid">
@@ -150,6 +149,7 @@
   </div>
 
   <script>
+    // 1. ABSOLUTE DIRECT TIMER LOOP
     var totalSeconds = 1800;
     var timerBox = document.getElementById('countdown-timer');
     var overlay = document.getElementById('lockout-screen');
@@ -164,17 +164,19 @@
 
       timerBox.innerText = mStr + ':' + sStr;
 
+      // Safe fallback inline styling to avoid DOM root calculation blocks
       if (totalSeconds <= 300) {
-        document.documentElement.style.setProperty('--timer-color', '#ef4444');
+        timerBox.style.color = '#ef4444';
+        timerBox.style.borderColor = '#ef4444';
       }
       if (totalSeconds === 0) {
         overlay.style.display = 'flex';
       }
       totalSeconds--;
     }
-
     setInterval(tick, 1000);
 
+    // 2. TIMEOUT-PROOF STATIC PHYSICS spark entries
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -190,6 +192,7 @@
     }
     showFact();
 
+    // 3. SECURE REDDIT LOADER
     function runReddit() {
       var subs = ['thane', 'mumbai', 'StockMarketIndia'];
       var box = document.getElementById('reddit-feed');
@@ -197,7 +200,6 @@
 
       subs.forEach(function(subName) {
         var u = 'https://reddit.com' + subName + '/hot.json?limit=4';
-        
         fetch('https://allorigins.win' + encodeURIComponent(u))
           .then(function(r) { return r.json(); })
           .then(function(j) {
@@ -210,19 +212,20 @@
               var el = document.createElement('div');
               el.className = 'content-card';
               
-              var contentText = '<div class="meta-row" style="margin-bottom:6px;">';
-              contentText += '<span class="tag tag-rd">r/' + subName + '</span>';
-              contentText += '<span>👤 ' + item.data.author + '</span></div>';
-              contentText += '<a href="https://reddit.com' + item.data.permalink + '" target="_blank">' + item.data.title + '</a>';
+              var cardInner = '<div class="meta-row" style="margin-bottom:6px;">';
+              cardInner += '<span class="tag tag-rd">r/' + subName + '</span>';
+              cardInner += '<span>👤 ' + item.data.author + '</span></div>';
+              cardInner += '<a href="https://reddit.com' + item.data.permalink + '" target="_blank">' + item.data.title + '</a>';
               
-              el.innerHTML = contentText;
+              el.innerHTML = cardInner;
               box.appendChild(el);
             });
           })
-          .catch(function(err) { console.log("Reddit fetch loop warning", err); });
+          .catch(function(err) { console.log(err); });
       });
     }
 
+    // 4. CLEAN JSON-BASED YOUTUBE PARSER
     function runYouTube() {
       var channels = [
         { name: 'Markets With Jayant', cid: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
@@ -242,7 +245,6 @@
 
       channels.forEach(function(ch) {
         var u = 'https://youtube.com' + ch.cid;
-        
         fetch('https://rss2json.com' + encodeURIComponent(u))
           .then(function(r) { return r.json(); })
           .then(function(j) {
@@ -257,19 +259,14 @@
                   var el = document.createElement('div');
                   el.className = 'content-card';
                   
-                  var ytCardHtml = '<div class="meta-row" style="margin-bottom:6px;">';
-                  ytCardHtml += '<span class="tag tag-yt">' + ch.name + '</span>';
-                  ytCardHtml += '<span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div>';
-                  ytCardHtml += '<a href="' + vid.link + '" target="_blank">' + vid.title + '</a>';
+                  var ytInner = '<div class="meta-row" style="margin-bottom:6px;">';
+                  ytInner += '<span class="tag tag-yt">' + ch.name + '</span>';
+                  ytInner += '<span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div>';
+                  ytInner += '<a href="' + vid.link + '" target="_blank">' + vid.title + '</a>';
                   
-                  el.innerHTML = ytCardHtml;
+                  el.innerHTML = ytInner;
                   box.appendChild(el);
                 }
               }
             }
           })
-          .catch(function(err) { console.log("YouTube track warning", err); });
-      });
-
-      setTimeout(function() {
-        if (box.innerHTML === '' || found === 0) {

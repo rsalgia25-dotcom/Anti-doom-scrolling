@@ -155,7 +155,7 @@
     const lockoutScreen = document.getElementById('lockout-screen');
 
     function startDashboardTimer() {
-      setInterval(() => {
+      setInterval(function() {
         let minutes = Math.floor(totalSeconds / 60);
         let seconds = totalSeconds % 60;
         minutes = minutes < 10 ? '0' + minutes : minutes;
@@ -192,66 +192,67 @@
       const container = document.getElementById('reddit-feed');
       container.innerHTML = ''; 
 
-      for (const sub of subreddits) {
+      for (let i = 0; i < subreddits.length; i++) {
+        const sub = subreddits[i];
         try {
-          const res = await fetch(`https://allorigins.win{encodeURIComponent(`https://reddit.com\${sub}/hot.json?limit=3`)}`);
+          const targetUrl = 'https://reddit.com' + sub + '/hot.json?limit=3';
+          const res = await fetch('https://allorigins.win' + encodeURIComponent(targetUrl));
           const raw = await res.json();
           const data = JSON.parse(raw.contents);
           const posts = data.data.children;
 
-          posts.forEach(post => {
-            if (post.data.stickied) return;
+          for (let j = 0; j < posts.length; j++) {
+            const post = posts[j];
+            if (post.data.stickied) continue;
+            
             const card = document.createElement('div');
             card.className = 'content-card';
-            card.innerHTML = `
-              <div class="meta-row" style="margin-bottom:6px;">
-                <span class="tag tag-rd">r/${sub}</span>
-                <span>👤 ${post.data.author}</span>
-              </div>
-              <a href="https://reddit.com${post.data.permalink}" target="_blank">${post.data.title}</a>
-            `;
+            card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-rd">r/' + sub + '</span><span>👤 ' + post.data.author + '</span></div><a href="https://reddit.com' + post.data.permalink + '" target="_blank">' + post.data.title + '</a>';
             container.appendChild(card);
-          });
+          }
         } catch (e) {
-          container.innerHTML += `<div class="loading">⚠️ Feed issue for r/${sub}</div>`;
+          console.error(e);
         }
+      }
+      if (container.innerHTML === '') {
+        container.innerHTML = '<div class="loading">No recent Reddit updates found.</div>';
       }
     }
 
     async function loadYouTubeCreators() {
       const creators = [
-        { name: 'Markets With Jayant', feedUrl: 'https://youtube.com' },
-        { name: 'Peek TV', feedUrl: 'https://youtube.com' },
-        { name: 'Cleo Abram', feedUrl: 'https://youtube.com' },
-        { name: 'Spiritualbee', feedUrl: 'https://youtube.com' },
-        { name: 'PowerTrain', feedUrl: 'https://youtube.com' },
-        { name: 'Mohak Mangal', feedUrl: 'https://youtube.com' },
-        { name: 'Vox', feedUrl: 'https://youtube.com' }
+        { name: 'Markets With Jayant', id: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
+        { name: 'Peek TV', id: 'UCvXU-vS_Zc8mH_mP7fOnw8A' },
+        { name: 'Cleo Abram', id: 'UC-Sg5EdfH9WpXFYG_Z_Mwtw' },
+        { name: 'Spiritualbee', id: 'UCCf_p-O7Xid4p_TbygHofHw' },
+        { name: 'PowerTrain', id: 'UC6z836F8y4gXp_qJ4t-Nq7Q' },
+        { name: 'Mohak Mangal', id: 'UC7O0_K878C3L9nZcda56G_A' },
+        { name: 'Vox', id: 'UC3xtz7vX_hIFNVyWhp07BfA' }
       ];
 
       const container = document.getElementById('youtube-feed');
       container.innerHTML = '';
 
-      for (const creator of creators) {
+      for (let i = 0; i < creators.length; i++) {
+        const creator = creators[i];
         try {
-          const apiRes = await fetch(`https://rss2json.com{encodeURIComponent(creator.feedUrl)}`);
+          const feedUrl = 'https://youtube.com' + creator.id;
+          const apiRes = await fetch('https://rss2json.com' + encodeURIComponent(feedUrl));
           const data = await apiRes.json();
 
           if (data.status === 'ok' && data.items && data.items.length > 0) {
-            const latestVideo = data.items[0]; // Fixed array extraction bug
+            const latestVideo = data.items[0]; // Select the single most recent video array entry
             const card = document.createElement('div');
             card.className = 'content-card';
-            card.innerHTML = `
-              <div class="meta-row" style="margin-bottom:6px;">
-                <span class="tag tag-yt">${creator.name}</span>
-              </div>
-              <a href="${latestVideo.link}" target="_blank">${latestVideo.title}</a>
-            `;
+            card.innerHTML = '<div class="meta-row" style="margin-bottom:6px;"><span class="tag tag-yt">' + creator.name + '</span></div><a href="' + latestVideo.link + '" target="_blank">' + latestVideo.title + '</a>';
             container.appendChild(card);
           }
         } catch (err) {
-          container.innerHTML += `<div class="loading">⚠️ Feed issue for ${creator.name}</div>`;
+          console.error(err);
         }
+      }
+      if (container.innerHTML === '') {
+        container.innerHTML = '<div class="loading">No recent creator updates found.</div>';
       }
     }
 

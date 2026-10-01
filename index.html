@@ -23,7 +23,7 @@
       line-height: 1.5;
     }
     .container { max-width: 1200px; margin: 0 auto; padding-bottom: 60px; }
-    
+
     .top-bar {
       position: sticky;
       top: 0;
@@ -58,27 +58,27 @@
     }
     .physics-panel h3 { margin-top: 0; color: var(--accent); font-size: 1.1rem; margin-bottom: 8px; }
     .physics-text { font-size: 1.1rem; color: var(--heading); font-weight: 500; }
-    
+
     .dashboard-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
     }
     @media (max-width: 850px) { .dashboard-grid { grid-template-columns: 1fr; } }
-    
+
     .feed-column {
       background-color: var(--card);
       border-radius: 12px;
       padding: 20px;
     }
-    .feed-column h2 { 
-      color: var(--heading); 
-      border-bottom: 2px solid #1e293b; 
-      padding-bottom: 10px; 
+    .feed-column h2 {
+      color: var(--heading);
+      border-bottom: 2px solid #1e293b;
+      padding-bottom: 10px;
       margin-top: 0;
       font-size: 1.3rem;
     }
-    
+
     .content-card {
       background: #1e293b;
       padding: 14px;
@@ -87,8 +87,8 @@
     }
     .content-card a { color: var(--heading); text-decoration: none; font-weight: 600; font-size: 1rem; display: block; margin-bottom: 6px; }
     .content-card a:hover { color: var(--accent); }
-    
-    .meta-row { display: flex; gap: 10px; align-items: center; font-size: 0.8rem; color: #94a3b8; }
+
+    .meta-row { display: flex; gap: 10px; align-items: center; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; }
     .tag {
       padding: 2px 6px;
       border-radius: 4px;
@@ -99,6 +99,32 @@
     .tag-yt { background-color: var(--youtube); }
     .tag-rd { background-color: var(--reddit); }
     .loading { color: #64748b; font-style: italic; padding: 10px; font-size: 0.9rem; }
+    .note { color: #64748b; font-size: 0.8rem; padding: 4px 10px; }
+
+    .player {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .player-thumb {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      border: 0; padding: 0; cursor: pointer;
+      background-color: #000; background-size: cover; background-position: center;
+    }
+    .play-icon {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 58px; height: 58px; border-radius: 50%;
+      background: rgba(239, 68, 68, 0.92); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; padding-left: 4px; box-sizing: border-box;
+    }
+    .player-thumb:hover .play-icon { background: #ef4444; }
 
     #lockout-screen {
       display: none;
@@ -121,18 +147,18 @@
 
   <div id="lockout-screen">
     <h2>⏰ Time's Up!</h2>
-    <p>Your 30 minutes are over. Put the phone away and get some sleep.</p>
+    <p>Your 2 hours are over. Put the phone away and get some sleep.</p>
   </div>
 
   <div class="container" id="main-content">
     <div class="top-bar">
       <h1>🌙 Wind-Down Hub</h1>
-      <div class="timer-box" id="countdown-timer">30:00</div>
+      <div class="timer-box" id="countdown-timer">2:00:00</div>
     </div>
 
     <section class="physics-panel">
       <h3>🌌 Tonight's Physics Spark</h3>
-      <div class="physics-text" id="physics-fact">Loading anomaly panel...</div>
+      <div class="physics-text" id="physics-fact">Loading...</div>
     </section>
 
     <main class="dashboard-grid">
@@ -143,137 +169,388 @@
 
       <div class="feed-column">
         <h2>🧡 Subreddit Pulses (Top Hot)</h2>
-        <div id="reddit-feed"><div class="loading">Searching local nodes...</div></div>
+        <div id="reddit-feed"><div class="loading">Searching subreddits...</div></div>
       </div>
     </main>
   </div>
 
   <script>
-    // 1. TIMER LOOP
-    var totalSeconds = 1800;
+    // ---------- helpers ----------
+    function el(tag, className, text) {
+      var e = document.createElement(tag);
+      if (className) e.className = className;
+      if (text !== undefined) e.textContent = text;
+      return e;
+    }
+
+    function fetchJson(url, timeoutMs) {
+      // No AbortController here: the sandboxed preview can't pass an AbortSignal to fetch.
+      var timeout = new Promise(function (_, reject) {
+        setTimeout(function () { reject(new Error('timeout')); }, timeoutMs || 10000);
+      });
+      var request = fetch(url).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+      return Promise.race([request, timeout]);
+    }
+
+    // ---------- embedded YouTube player ----------
+    // Shows a thumbnail first and only loads the real player when tapped (lighter and faster).
+    var activePlayer = null;
+
+    function videoIdFromLink(link) {
+      var m = (link || '').match(/[?&]v=([\w-]{11})/) || (link || '').match(/\/shorts\/([\w-]{11})/);
+      return m ? m[1] : null;
+    }
+
+    function buildPlayer(videoId) {
+      var wrap = el('div', 'player');
+
+      function showThumb() {
+        wrap.innerHTML = '';
+        var btn = el('button', 'player-thumb');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Play video');
+        btn.style.backgroundImage = "url('https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg')";
+        btn.appendChild(el('span', 'play-icon', '▶'));
+        btn.addEventListener('click', play);
+        wrap.appendChild(btn);
+      }
+
+      function play() {
+        if (activePlayer && activePlayer !== wrap) activePlayer._reset();
+        wrap.innerHTML = '';
+        var f = document.createElement('iframe');
+        f.src = 'https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&rel=0&playsinline=1';
+        f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+        f.allowFullscreen = true;
+        f.referrerPolicy = 'strict-origin-when-cross-origin';
+        f.title = 'YouTube video player';
+        wrap.appendChild(f);
+        activePlayer = wrap;
+      }
+
+      wrap._reset = showThumb;
+      showThumb();
+      return wrap;
+    }
+
+    // ---------- 1. TIMER (timestamp based) ----------
+    // Uses the real clock, so it stays correct when the phone sleeps or the tab is in the background.
+    // The end time is saved, so reloading the page does NOT restart the 30 minutes.
+    // A new session starts automatically 6 hours after the last one ended.
+    var DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+    var NEW_SESSION_AFTER_MS = 6 * 60 * 60 * 1000;
+    var STORE_KEY = 'winddown_end_time_2h';
+
     var timerBox = document.getElementById('countdown-timer');
     var overlay = document.getElementById('lockout-screen');
+    var endTime = 0;
+    var timerId = null;
+
+    try {
+      var saved = parseInt(localStorage.getItem(STORE_KEY), 10);
+      if (saved && saved > Date.now() - NEW_SESSION_AFTER_MS) endTime = saved;
+    } catch (e) {}
+    if (!endTime) {
+      endTime = Date.now() + DURATION_MS;
+      try { localStorage.setItem(STORE_KEY, String(endTime)); } catch (e) {}
+    }
 
     function tick() {
-      if (totalSeconds < 0) return;
-      var m = Math.floor(totalSeconds / 60);
-      var s = totalSeconds % 60;
-      
-      var mStr = (m < 10) ? '0' + m : '' + m;
-      var sStr = (s < 10) ? '0' + s : '' + s;
+      var remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      var h = Math.floor(remaining / 3600);
+      var m = Math.floor((remaining % 3600) / 60);
+      var s = remaining % 60;
+      var mm = (m < 10 ? '0' : '') + m;
+      var ss = (s < 10 ? '0' : '') + s;
+      timerBox.textContent = (h > 0 ? h + ':' : '') + mm + ':' + ss;
 
-      timerBox.innerText = mStr + ':' + sStr;
-
-      if (totalSeconds <= 300) {
+      if (remaining <= 300) {
         timerBox.style.color = '#ef4444';
         timerBox.style.borderColor = '#ef4444';
       }
-      if (totalSeconds === 0) {
+      if (remaining === 0) {
         overlay.style.display = 'flex';
+        // stop any video that is still playing
+        var frames = document.querySelectorAll('.player iframe');
+        for (var i = 0; i < frames.length; i++) frames[i].remove();
+        clearInterval(timerId);
       }
-      totalSeconds--;
     }
-    setInterval(tick, 1000);
+    tick();
+    timerId = setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', tick);
 
-    // 2. PHYSICS FACT GENERATOR
+    // ---------- 2. PHYSICS FACT ----------
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
-      "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
-      "The Cosmic Microwave Background is the literal afterglow of the Big Bang, filling all space. Roughly 1% of ancient analog TV static is interference from the birth of the universe.",
-      "A single teaspoon of a Neutron Star would weigh roughly 6 billion tons on Earth. They are the collapsed iron cores of supergiant stars compressed down to the size of a single city.",
-      "Entangled particles mirror each other instantly across light-years. Einstein called this 'spooky action at a distance', where changing one immediately dictates the state of its paired twin."
+      "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
+      "The Cosmic Microwave Background is the literal afterglow of the Big Bang, filling all space. A small fraction of the static on an old analog TV was this ancient light.",
+      "A single teaspoon of a Neutron Star would weigh roughly 6 billion tons on Earth. They are the collapsed cores of massive stars, compressed to the size of a city.",
+      "Entangled particles share correlated states across light-years. Einstein called this 'spooky action at a distance', yet it can't be used to send information faster than light."
     ];
 
     function showFact() {
-      var d = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-      var idx = d % deepPhysicsFacts.length;
-      document.getElementById('physics-fact').innerText = deepPhysicsFacts[idx];
+      var now = new Date();
+      var dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+      document.getElementById('physics-fact').textContent =
+        deepPhysicsFacts[dayOfYear % deepPhysicsFacts.length];
     }
     showFact();
 
-    // 3. SECURE REDDIT LOADER
+    // ---------- 3. REDDIT ----------
+    // Reddit blocks direct requests from a browser (CORS), so we go through public proxies,
+    // trying each one in turn, and finally fall back to Reddit's RSS feed via rss2json.
+    var PROXIES = [
+      function (u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
+      function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); },
+      function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); }
+    ];
+
+    function viaProxies(url, fetcher) {
+      fetcher = fetcher || fetchJson;
+      var chain = Promise.reject(new Error('start'));
+      PROXIES.forEach(function (makeUrl) {
+        chain = chain.catch(function () { return fetcher(makeUrl(url), 12000); });
+      });
+      return chain;
+    }
+
+    function getRedditPosts(sub) {
+      var jsonUrl = 'https://www.reddit.com/r/' + sub + '/hot.json?limit=8&raw_json=1';
+      return viaProxies(jsonUrl)
+        .then(function (parsed) {
+          var items = (parsed && parsed.data && parsed.data.children) || [];
+          var posts = [];
+          items.forEach(function (item) {
+            if (item.data.stickied) return;
+            posts.push({
+              title: item.data.title,
+              url: 'https://www.reddit.com' + item.data.permalink,
+              author: item.data.author
+            });
+          });
+          if (!posts.length) throw new Error('no posts in JSON');
+          return posts;
+        })
+        .catch(function () {
+          var rssUrl = 'https://www.reddit.com/r/' + sub + '/hot.rss';
+          return fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
+            .then(function (j) {
+              if (!j || j.status !== 'ok' || !j.items || !j.items.length) {
+                throw new Error(j && j.message ? j.message : 'no posts in RSS');
+              }
+              return j.items.map(function (it) {
+                return { title: it.title, url: it.link, author: (it.author || '').replace(/^\/?u\//, '') };
+              });
+            });
+        });
+    }
+
     function runReddit() {
       var subs = ['thane', 'mumbai', 'StockMarketIndia'];
       var box = document.getElementById('reddit-feed');
-      box.innerHTML = '';
+      var pending = subs.length;
+      var shown = 0;
+      var failed = [];
 
-      subs.forEach(function(subName) {
-        var u = 'https://www.reddit.com/r/' + subName + '/hot.json?limit=4';
-        fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(u))
-          .then(function(r) { return r.json(); })
-          .then(function(j) {
-            var parsed = JSON.parse(j.contents);
-            if (!parsed || !parsed.data || !parsed.data.children) return;
-            var items = parsed.data.children;
-            
-            items.forEach(function(item) {
-              if (item.data.stickied) return;
-              var el = document.createElement('div');
-              el.className = 'content-card';
-              
-              var cardInner = '<div class="meta-row" style="margin-bottom:6px;">';
-              cardInner += '<span class="tag tag-rd">r/' + subName + '</span>';
-              cardInner += '<span>👤 ' + item.data.author + '</span></div>';
-              cardInner += '<a href="https://reddit.com' + item.data.permalink + '" target="_blank">' + item.data.title + '</a>';
-              
-              el.innerHTML = cardInner;
-              box.appendChild(el);
+      function done() {
+        pending--;
+        if (pending > 0) return;
+        if (shown === 0) {
+          box.innerHTML = '';
+          box.appendChild(el('div', 'loading', 'Could not load Reddit posts right now.'));
+        }
+        if (failed.length) {
+          box.appendChild(el('div', 'note', 'Failed: r/' + failed.join(', r/')));
+        }
+      }
+
+      subs.forEach(function (subName) {
+        getRedditPosts(subName)
+          .then(function (posts) {
+            posts.slice(0, 4).forEach(function (post) {
+              if (shown === 0) box.innerHTML = '';
+              shown++;
+
+              var card = el('div', 'content-card');
+              var meta = el('div', 'meta-row');
+              meta.appendChild(el('span', 'tag tag-rd', 'r/' + subName));
+              if (post.author) meta.appendChild(el('span', '', '👤 ' + post.author));
+              card.appendChild(meta);
+
+              var a = el('a', '', post.title);
+              a.href = post.url;
+              a.target = '_blank';
+              a.rel = 'noopener';
+              card.appendChild(a);
+              box.appendChild(card);
             });
+            done();
           })
-          .catch(function(err) { console.error('Reddit fetch error:', err); });
+          .catch(function (err) {
+            console.error('Reddit error for r/' + subName + ':', err);
+            failed.push(subName);
+            done();
+          });
       });
     }
 
-    // 4. CLEAN JSON-BASED YOUTUBE PARSER
-    function runYouTube() {
-      var channels = [
-        { name: 'Markets With Jayant', cid: 'UCP_W8ZpS9Yg8P_h2n2v0j_g' },
-        { name: 'Peek TV', cid: 'UCvXU-vS_Zc8mH_mP7fOnw8A' },
-        { name: 'Cleo Abram', cid: 'UC-Sg5EdfH9WpXFYG_Z_Mwtw' },
-        { name: 'Spiritualbee', cid: 'UCCf_p-O7Xid4p_TbygHofHw' },
-        { name: 'PowerTrain', cid: 'UC6z836F8y4gXp_qJ4t-Nq7Q' },
-        { name: 'Mohak Mangal', cid: 'UC7O0_K878C3L9nZcda56G_A' },
-        { name: 'Vox', cid: 'UC3xtz7vX_hIFNVyWhp07BfA' }
-      ];
+    // ---------- 4. YOUTUBE ----------
+    // Channels are listed by @handle. The channel ID is looked up once and cached in the browser.
+    // If a handle fails to resolve, add its UC... ID as `cid` and it will be used directly.
+    var channels = [
+      { name: 'Markets With Jayant', handle: 'MarketsWithJayant', cid: 'UCRQPB3d89cdB3iG4-KF-BqQ' },
+      { name: 'PowerTrain', handle: 'PowerTrain', cid: 'UCDUxlJNxIf6sSag7_A395Bg' }
+    ];
 
-      var box = document.getElementById('youtube-feed');
-      box.innerHTML = '';
-      var tsNow = new Date().getTime();
-      var maxAge = 48 * 60 * 60 * 1000;
-      var found = 0;
+    function fetchText(url, timeoutMs) {
+      var timeout = new Promise(function (_, reject) {
+        setTimeout(function () { reject(new Error('timeout')); }, timeoutMs || 15000);
+      });
+      var request = fetch(url).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      });
+      return Promise.race([request, timeout]);
+    }
 
-      channels.forEach(function(ch) {
-        var rssUrl = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + ch.cid;
-        fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
-          .then(function(r) { return r.json(); })
-          .then(function(j) {
-            if (j && j.status === 'ok' && j.items && j.items.length > 0) {
-              for (var i = 0; i < Math.min(j.items.length, 3); i++) {
-                var vid = j.items[i];
-                var cleanDateStr = vid.pubDate.replace(/-/g, "/");
-                var vTs = new Date(cleanDateStr).getTime();
-                
-                if ((tsNow - vTs) <= maxAge) {
-                  found++;
-                  var el = document.createElement('div');
-                  el.className = 'content-card';
-                  
-                  var ytInner = '<div class="meta-row" style="margin-bottom:6px;">';
-                  ytInner += '<span class="tag tag-yt">' + ch.name + '</span>';
-                  ytInner += '<span style="color:#38bdf8; font-size:11px;">● Last 48h</span></div>';
-                  ytInner += '<a href="' + vid.link + '" target="_blank">' + vid.title + '</a>';
-                  
-                  el.innerHTML = ytInner;
-                  box.appendChild(el);
-                }
+    function resolveChannelId(ch) {
+      if (ch.cid) return Promise.resolve(ch.cid);
+      var key = 'yt_cid_' + ch.handle;
+      try {
+        var cached = localStorage.getItem(key);
+        if (cached) return Promise.resolve(cached);
+      } catch (e) {}
+      var page = 'https://www.youtube.com/@' + ch.handle;
+      return fetchText('https://api.allorigins.win/raw?url=' + encodeURIComponent(page))
+        .then(function (html) {
+          var m = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{22})"/) ||
+                  html.match(/"externalId":"(UC[\w-]{22})"/) ||
+                  html.match(/"channelId":"(UC[\w-]{22})"/);
+          if (!m) throw new Error('could not find channel ID for @' + ch.handle);
+          try { localStorage.setItem(key, m[1]); } catch (e) {}
+          return m[1];
+        });
+    }
+
+    function parseUtc(pubDate) {
+      // rss2json returns "YYYY-MM-DD HH:MM:SS" in UTC
+      return new Date(pubDate.replace(' ', 'T') + 'Z').getTime();
+    }
+
+    function parseFeedXml(xmlText) {
+      var doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+      if (doc.getElementsByTagName('parsererror').length) throw new Error('bad XML');
+      var entries = doc.getElementsByTagName('entry');
+      var out = [];
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var title = e.getElementsByTagName('title')[0];
+        var pub = e.getElementsByTagName('published')[0];
+        var link = e.getElementsByTagName('link')[0];
+        if (!title || !pub || !link) continue;
+        out.push({ title: title.textContent, link: link.getAttribute('href'), ts: new Date(pub.textContent).getTime() });
+      }
+      if (!out.length) throw new Error('no entries in feed');
+      return out;
+    }
+
+    // Gets the channel's videos, newest first.
+    // Tries YouTube's own feed through the proxies first (always fresh), then rss2json (can be cached).
+    function getVideos(cid) {
+      var rssUrl = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + cid;
+      return viaProxies(rssUrl, fetchText)
+        .then(parseFeedXml)
+        .catch(function () {
+          return fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
+            .then(function (j) {
+              if (!j || j.status !== 'ok' || !j.items || !j.items.length) {
+                throw new Error(j && j.message ? j.message : 'bad response');
               }
-            }
+              return j.items.map(function (it) {
+                return { title: it.title, link: it.link, ts: parseUtc(it.pubDate) };
+              });
+            });
+        })
+        .then(function (videos) {
+          return videos.sort(function (a, b) { return b.ts - a.ts; });
+        });
+    }
+
+    function ageLabel(ms) {
+      var hrs = Math.max(1, Math.round(ms / 3600000));
+      return hrs < 48 ? hrs + 'h ago' : Math.round(hrs / 24) + 'd ago';
+    }
+
+    function runYouTube() {
+      var box = document.getElementById('youtube-feed');
+      var maxAge = 48 * 60 * 60 * 1000;
+      var pending = channels.length;
+      var shown = 0;
+      var failed = [];
+      var latest = [];
+
+      function renderCard(ch, vid) {
+        var card = el('div', 'content-card');
+        var meta = el('div', 'meta-row');
+        meta.appendChild(el('span', 'tag tag-yt', ch.name));
+        meta.appendChild(el('span', '', ageLabel(Date.now() - vid.ts)));
+        card.appendChild(meta);
+
+        var videoId = videoIdFromLink(vid.link);
+        if (videoId) card.appendChild(buildPlayer(videoId));
+
+        var a = el('a', '', vid.title);
+        a.href = vid.link;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        card.appendChild(a);
+        box.appendChild(card);
+      }
+
+      function done() {
+        pending--;
+        if (pending > 0) return;
+        if (shown === 0) {
+          box.innerHTML = '';
+          if (latest.length) {
+            box.appendChild(el('div', 'note', 'No new videos in the last 48 hours. Showing the latest upload from each channel.'));
+            latest.sort(function (a, b) { return b.vid.ts - a.vid.ts; });
+            latest.forEach(function (x) { renderCard(x.ch, x.vid); });
+          } else {
+            box.appendChild(el('div', 'loading', 'Could not load any channel feeds right now.'));
+          }
+        }
+        if (failed.length) {
+          box.appendChild(el('div', 'note', 'Failed: ' + failed.join(', ')));
+        }
+      }
+
+      channels.forEach(function (ch) {
+        resolveChannelId(ch)
+          .then(getVideos)
+          .then(function (videos) {
+            latest.push({ ch: ch, vid: videos[0] });
+            var now = Date.now();
+            videos.slice(0, 3).forEach(function (vid) {
+              if (now - vid.ts > maxAge) return;
+              if (shown === 0) box.innerHTML = '';
+              shown++;
+              renderCard(ch, vid);
+            });
+            done();
           })
-          .catch(function(err) { console.error('YouTube fetch error:', err); });
+          .catch(function (err) {
+            console.error('YouTube error for ' + ch.name + ':', err);
+            failed.push(ch.name);
+            done();
+          });
       });
     }
 
-    // Execute feed loaders on load
     runReddit();
     runYouTube();
   </script>

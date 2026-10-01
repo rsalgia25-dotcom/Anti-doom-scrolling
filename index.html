@@ -101,6 +101,29 @@
     .loading { color: #64748b; font-style: italic; padding: 10px; font-size: 0.9rem; }
     .note { color: #64748b; font-size: 0.8rem; padding: 4px 10px; }
 
+    .post-img {
+      display: block; width: 100%; max-height: 360px; object-fit: contain;
+      background: #0f172a; border-radius: 6px; margin: 8px 0;
+    }
+    .post-body {
+      white-space: pre-wrap; word-break: break-word;
+      font-size: 0.9rem; color: #cbd5e1;
+      max-height: 6.5em; overflow: hidden; margin: 6px 0;
+    }
+    .post-body.expanded { max-height: none; }
+    .post-link { font-size: 0.8rem; color: #94a3b8; margin: 4px 0; }
+    .toggle-btn {
+      background: #0f172a; color: #cbd5e1; border: 1px solid #334155;
+      border-radius: 6px; padding: 6px 10px; font-size: 0.8rem;
+      cursor: pointer; margin-top: 6px;
+    }
+    .toggle-btn:hover { border-color: var(--accent); color: var(--heading); }
+    .comments { margin-top: 10px; border-top: 1px solid #334155; padding-top: 8px; }
+    .comment { border-left: 2px solid #334155; padding-left: 10px; margin: 8px 0; }
+    .comment.reply { margin-left: 6px; }
+    .c-meta { font-size: 0.75rem; color: #94a3b8; }
+    .c-body { white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
+
     .player {
       position: relative;
       width: 100%;
@@ -318,6 +341,32 @@
       return chain;
     }
 
+    function stripHtml(html) {
+      var d = new DOMParser().parseFromString(html || '', 'text/html');
+      return (d.body.textContent || '').trim();
+    }
+
+    function postFromJson(d) {
+      var image = null;
+      if (!d.over_18) {
+        if (d.preview && d.preview.images && d.preview.images[0] && d.preview.images[0].source) {
+          image = d.preview.images[0].source.url;
+        } else if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(d.url || '')) {
+          image = d.url;
+        }
+      }
+      return {
+        title: d.title,
+        url: 'https://www.reddit.com' + d.permalink,
+        author: d.author,
+        body: d.selftext || '',
+        image: image,
+        domain: d.is_self ? '' : (d.domain || ''),
+        link: d.is_self ? '' : (d.url || ''),
+        comments: d.num_comments
+      };
+    }
+
     function getRedditPosts(sub) {
       var jsonUrl = 'https://www.reddit.com/r/' + sub + '/hot.json?limit=8&raw_json=1';
       return viaProxies(jsonUrl)
@@ -326,11 +375,7 @@
           var posts = [];
           items.forEach(function (item) {
             if (item.data.stickied) return;
-            posts.push({
-              title: item.data.title,
-              url: 'https://www.reddit.com' + item.data.permalink,
-              author: item.data.author
-            });
+            posts.push(postFromJson(item.data));
           });
           if (!posts.length) throw new Error('no posts in JSON');
           return posts;
@@ -343,10 +388,139 @@
                 throw new Error(j && j.message ? j.message : 'no posts in RSS');
               }
               return j.items.map(function (it) {
-                return { title: it.title, url: it.link, author: (it.author || '').replace(/^\/?u\//, '') };
+                return {
+                  title: it.title, url: it.link, author: (it.author || '').replace(/^\/?u\//, ''),
+                  body: '', image: null, domain: '', link: '', comments: null
+                };
               });
             });
         });
+    }
+
+    // ----- comments -----
+    function toComment(c) {
+      var d = c.data;
+      var replies = [];
+      if (d.replies && d.replies.data && d.replies.data.children) {
+        d.replies.data.children.forEach(function (r) {
+          if (r.kind === 't1') replies.push(toComment(r));
+        });
+      }
+      return { author: d.author, body: d.body, score: d.score, replies: replies };
+    }
+
+    function getComments(post) {
+      var base = post.url.replace(/\/?$/, '/');
+      return viaProxies(base + '.json?limit=15&depth=2&sort=top&raw_json=1')
+        .then(function (data) {
+          var list = data && data[1] && data[1].data && data[1].data.children;
+          if (!list) throw new Error('bad comments JSON');
+          return list.filter(function (c) { return c.kind === 't1'; }).map(toComment);
+        })
+        .catch(function () {
+          var rssUrl = base + '.rss?limit=15&sort=top';
+          return fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
+            .then(function (j) {
+              if (!j || j.status !== 'ok' || !j.items) throw new Error('bad comments RSS');
+              return j.items.slice(1).map(function (it) {
+                return { author: (it.author || '').replace(/^\/?u\//, ''), body: stripHtml(it.content), score: null, replies: [] };
+              });
+            });
+        });
+    }
+
+    function renderComment(c, depth) {
+      if (!c.body || c.body === '[removed]' || c.body === '[deleted]') return null;
+      var box = el('div', depth ? 'comment reply' : 'comment');
+      box.appendChild(el('div', 'c-meta', c.author + (c.score !== null && c.score !== undefined ? '  ·  ▲ ' + c.score : '')));
+      box.appendChild(el('div', 'c-body', c.body));
+      if (depth < 1) {
+        c.replies.slice(0, 3).forEach(function (r) {
+          var rEl = renderComment(r, depth + 1);
+          if (rEl) box.appendChild(rEl);
+        });
+      }
+      return box;
+    }
+
+    function renderPostCard(subName, post) {
+      var card = el('div', 'content-card');
+      var meta = el('div', 'meta-row');
+      meta.appendChild(el('span', 'tag tag-rd', 'r/' + subName));
+      if (post.author) meta.appendChild(el('span', '', '👤 ' + post.author));
+      card.appendChild(meta);
+
+      var a = el('a', '', post.title);
+      a.href = post.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      card.appendChild(a);
+
+      if (post.image) {
+        var img = el('img', 'post-img');
+        img.src = post.image;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { img.remove(); };
+        card.appendChild(img);
+      }
+
+      var bodyEl = null;
+      if (post.body) {
+        bodyEl = el('div', 'post-body', post.body);
+        card.appendChild(bodyEl);
+      }
+      if (post.link) {
+        var l = el('div', 'post-link');
+        var la = el('a', '', '🔗 ' + (post.domain || post.link));
+        la.href = post.link;
+        la.target = '_blank';
+        la.rel = 'noopener';
+        la.style.display = 'inline';
+        la.style.fontWeight = 'normal';
+        l.appendChild(la);
+        card.appendChild(l);
+      }
+
+      var closedLabel = '💬 Read full post & comments' + (post.comments !== null && post.comments !== undefined ? ' (' + post.comments + ')' : '');
+      var toggle = el('button', 'toggle-btn', closedLabel);
+      toggle.type = 'button';
+      var panel = el('div', 'comments');
+      panel.style.display = 'none';
+      var loaded = false;
+
+      toggle.addEventListener('click', function () {
+        var open = panel.style.display === 'none';
+        panel.style.display = open ? 'block' : 'none';
+        if (bodyEl) bodyEl.classList.toggle('expanded', open);
+        toggle.textContent = open ? '▲ Hide' : closedLabel;
+        if (open && !loaded) {
+          loaded = true;
+          panel.innerHTML = '';
+          panel.appendChild(el('div', 'loading', 'Loading comments...'));
+          getComments(post)
+            .then(function (comments) {
+              panel.innerHTML = '';
+              var count = 0;
+              comments.slice(0, 8).forEach(function (c) {
+                var cEl = renderComment(c, 0);
+                if (cEl) { panel.appendChild(cEl); count++; }
+              });
+              if (!count) panel.appendChild(el('div', 'loading', 'No comments yet.'));
+            })
+            .catch(function (err) {
+              console.error('Comments error:', err);
+              loaded = false;
+              panel.innerHTML = '';
+              panel.appendChild(el('div', 'loading', 'Could not load comments. Tap Hide and try again, or open the post on Reddit.'));
+            });
+        }
+      });
+
+      card.appendChild(toggle);
+      card.appendChild(panel);
+      return card;
     }
 
     function runReddit() {
@@ -374,19 +548,7 @@
             posts.slice(0, 4).forEach(function (post) {
               if (shown === 0) box.innerHTML = '';
               shown++;
-
-              var card = el('div', 'content-card');
-              var meta = el('div', 'meta-row');
-              meta.appendChild(el('span', 'tag tag-rd', 'r/' + subName));
-              if (post.author) meta.appendChild(el('span', '', '👤 ' + post.author));
-              card.appendChild(meta);
-
-              var a = el('a', '', post.title);
-              a.href = post.url;
-              a.target = '_blank';
-              a.rel = 'noopener';
-              card.appendChild(a);
-              box.appendChild(card);
+              box.appendChild(renderPostCard(subName, post));
             });
             done();
           })
@@ -403,7 +565,9 @@
     // If a handle fails to resolve, add its UC... ID as `cid` and it will be used directly.
     var channels = [
       { name: 'Markets With Jayant', handle: 'MarketsWithJayant', cid: 'UCRQPB3d89cdB3iG4-KF-BqQ' },
-      { name: 'PowerTrain', handle: 'PowerTrain', cid: 'UCDUxlJNxIf6sSag7_A395Bg' }
+      { name: 'PowerTrain', handle: 'PowerTrain', cid: 'UCDUxlJNxIf6sSag7_A395Bg' },
+      { name: 'Cleo Abram', handle: 'CleoAbram', cid: 'UC415bOPUcGSamy543abLmRA' },
+      { name: 'Peek TV', handle: 'PeekTVOfficial', cid: 'UCF_kWxafJ5Nr0OLd9aoCHsQ' }
     ];
 
     function fetchText(url, timeoutMs) {

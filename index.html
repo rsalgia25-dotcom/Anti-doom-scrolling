@@ -149,7 +149,7 @@
   </div>
 
   <script>
-    // 1. ABSOLUTE DIRECT TIMER LOOP
+    // 1. TIMER LOOP
     var totalSeconds = 1800;
     var timerBox = document.getElementById('countdown-timer');
     var overlay = document.getElementById('lockout-screen');
@@ -164,7 +164,6 @@
 
       timerBox.innerText = mStr + ':' + sStr;
 
-      // Safe fallback inline styling to avoid DOM root calculation blocks
       if (totalSeconds <= 300) {
         timerBox.style.color = '#ef4444';
         timerBox.style.borderColor = '#ef4444';
@@ -176,7 +175,7 @@
     }
     setInterval(tick, 1000);
 
-    // 2. TIMEOUT-PROOF STATIC PHYSICS spark entries
+    // 2. PHYSICS FACT GENERATOR
     var deepPhysicsFacts = [
       "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
       "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic layout quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
@@ -199,8 +198,8 @@
       box.innerHTML = '';
 
       subs.forEach(function(subName) {
-        var u = 'https://reddit.com' + subName + '/hot.json?limit=4';
-        fetch('https://allorigins.win' + encodeURIComponent(u))
+        var u = 'https://www.reddit.com/r/' + subName + '/hot.json?limit=4';
+        fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(u))
           .then(function(r) { return r.json(); })
           .then(function(j) {
             var parsed = JSON.parse(j.contents);
@@ -221,7 +220,7 @@
               box.appendChild(el);
             });
           })
-          .catch(function(err) { console.log(err); });
+          .catch(function(err) { console.error('Reddit fetch error:', err); });
       });
     }
 
@@ -244,8 +243,8 @@
       var found = 0;
 
       channels.forEach(function(ch) {
-        var u = 'https://youtube.com' + ch.cid;
-        fetch('https://rss2json.com' + encodeURIComponent(u))
+        var rssUrl = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + ch.cid;
+        fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
           .then(function(r) { return r.json(); })
           .then(function(j) {
             if (j && j.status === 'ok' && j.items && j.items.length > 0) {
@@ -270,3 +269,13 @@
               }
             }
           })
+          .catch(function(err) { console.error('YouTube fetch error:', err); });
+      });
+    }
+
+    // Execute feed loaders on load
+    runReddit();
+    runYouTube();
+  </script>
+</body>
+</html>

@@ -124,6 +124,65 @@
     .c-meta { font-size: 0.75rem; color: #94a3b8; }
     .c-body { white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
 
+    .tools-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    @media (max-width: 850px) { .tools-grid { grid-template-columns: 1fr; } }
+    .tool-panel { background-color: var(--card); border-radius: 12px; padding: 20px; }
+    .tool-panel h3 {
+      margin: 0 0 12px; color: var(--heading); font-size: 1.1rem;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .tool-panel h4 { margin: 16px 0 8px; color: var(--accent); font-size: 0.95rem; }
+    .chip {
+      display: inline-block; font-size: 0.75rem; font-weight: 600; color: #10b981;
+      background: #0f172a; border: 1px solid #1e293b; padding: 2px 8px; border-radius: 999px;
+    }
+    #fact-cat { margin-bottom: 10px; color: var(--accent); }
+    .fact-meta { margin-top: 12px; font-size: 0.8rem; color: #64748b; font-family: monospace; }
+    @keyframes factfade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .fade-in { animation: factfade 0.6s ease; }
+
+    #wordle-board { display: grid; gap: 6px; width: min(100%, 290px); margin: 0 auto 10px; }
+    .w-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .w-tile {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.5rem; text-transform: uppercase;
+      border: 2px solid #334155; border-radius: 6px; color: var(--heading);
+    }
+    .w-tile.filled { border-color: #64748b; }
+    .w-tile.correct { background: #16a34a; border-color: #16a34a; }
+    .w-tile.present { background: #ca8a04; border-color: #ca8a04; }
+    .w-tile.absent { background: #334155; border-color: #334155; }
+    .w-msg { text-align: center; min-height: 1.4em; font-size: 0.9rem; color: var(--heading); margin-bottom: 8px; }
+    #wordle-kb { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+    .kb-row { display: flex; gap: 5px; justify-content: center; width: 100%; }
+    .key {
+      flex: 1; max-width: 38px; height: 44px; border: 0; border-radius: 6px;
+      background: #475569; color: var(--heading); font-weight: 600; font-size: 0.85rem;
+      text-transform: uppercase; cursor: pointer; padding: 0;
+    }
+    .key.wide { max-width: 62px; flex: 1.6; font-size: 0.7rem; }
+    .key.correct { background: #16a34a; }
+    .key.present { background: #ca8a04; }
+    .key.absent { background: #1e293b; color: #64748b; }
+
+    .task-input {
+      width: 100%; box-sizing: border-box; background: #0f172a; color: var(--heading);
+      border: 1px solid #334155; border-radius: 6px; padding: 9px 10px;
+      font-size: 0.95rem; margin-bottom: 8px; font-family: inherit;
+    }
+    .task-input:focus { outline: none; border-color: var(--accent); }
+    .task-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .task-row.done span { text-decoration: line-through; color: #64748b; }
+    .hint { font-size: 0.75rem; color: #64748b; }
+    #lockout-tasks { margin-top: 24px; text-align: left; max-width: 420px; }
+    #lockout-tasks h3 { color: #cbd5e1; margin-bottom: 8px; }
+    #lockout-tasks li { color: #94a3b8; margin: 4px 0; }
+
     .player {
       position: relative;
       width: 100%;
@@ -171,6 +230,7 @@
   <div id="lockout-screen">
     <h2>⏰ Time's Up!</h2>
     <p>Your 2 hours are over. Put the phone away and get some sleep.</p>
+    <div id="lockout-tasks"></div>
   </div>
 
   <div class="container" id="main-content">
@@ -180,8 +240,31 @@
     </div>
 
     <section class="physics-panel">
-      <h3>🌌 Tonight's Physics Spark</h3>
+      <h3>🌌 Tonight's Science Spark</h3>
+      <div class="chip" id="fact-cat"></div>
       <div class="physics-text" id="physics-fact">Loading...</div>
+      <div class="fact-meta" id="fact-meta"></div>
+    </section>
+
+    <section class="tools-grid">
+      <div class="tool-panel" id="wordle-panel">
+        <h3>🟩 Daily Word <span class="chip" id="wordle-streak"></span></h3>
+        <div id="wordle-board"></div>
+        <div class="w-msg" id="wordle-msg"></div>
+        <div id="wordle-kb"></div>
+      </div>
+
+      <div class="tool-panel" id="tasks-panel">
+        <div id="today-tasks" style="display:none;">
+          <h3>✅ Today's top 3</h3>
+          <div id="today-list"></div>
+        </div>
+        <h3 id="tomorrow-heading">📝 Tomorrow's top 3</h3>
+        <input class="task-input" id="task-1" type="text" maxlength="120" placeholder="Task 1" autocomplete="off">
+        <input class="task-input" id="task-2" type="text" maxlength="120" placeholder="Task 2" autocomplete="off">
+        <input class="task-input" id="task-3" type="text" maxlength="120" placeholder="Task 3" autocomplete="off">
+        <div class="hint">Saved automatically on this device. Tomorrow they appear above as today's list.</div>
+      </div>
     </section>
 
     <main class="dashboard-grid">
@@ -259,6 +342,98 @@
       return wrap;
     }
 
+    // ---------- dates (a "day" rolls over at 4 AM, so a late night still counts as the same day) ----------
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+    function logicalNow() { return new Date(Date.now() - 4 * 3600 * 1000); }
+    function keyFor(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+    function todayKey() { return keyFor(logicalNow()); }
+    function tomorrowKey() {
+      var d = logicalNow();
+      d.setDate(d.getDate() + 1);
+      return keyFor(d);
+    }
+    function dayNumberOf(key) {
+      var p = key.split('-');
+      return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000);
+    }
+
+    // ---------- top 3 tasks ----------
+    var TASKS_KEY = 'winddown_tasks_v1';
+
+    function loadTasks() {
+      try { return JSON.parse(localStorage.getItem(TASKS_KEY)) || {}; } catch (e) { return {}; }
+    }
+
+    function saveTasks(all) {
+      // drop entries older than two weeks
+      var cut = new Date(logicalNow());
+      cut.setDate(cut.getDate() - 14);
+      var cutKey = keyFor(cut);
+      Object.keys(all).forEach(function (k) { if (k < cutKey) delete all[k]; });
+      try { localStorage.setItem(TASKS_KEY, JSON.stringify(all)); } catch (e) {}
+    }
+
+    function initTasks() {
+      var all = loadTasks();
+      var tKey = todayKey();
+      var nKey = tomorrowKey();
+
+      // today's list (written last night), with check boxes
+      var todays = all[tKey];
+      if (todays && todays.some(function (t) { return t.text; })) {
+        document.getElementById('today-tasks').style.display = 'block';
+        var list = document.getElementById('today-list');
+        todays.forEach(function (t, i) {
+          if (!t.text) return;
+          var row = el('label', 'task-row' + (t.done ? ' done' : ''));
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!t.done;
+          cb.addEventListener('change', function () {
+            var fresh = loadTasks();
+            if (fresh[tKey] && fresh[tKey][i]) fresh[tKey][i].done = cb.checked;
+            saveTasks(fresh);
+            row.className = 'task-row' + (cb.checked ? ' done' : '');
+          });
+          row.appendChild(cb);
+          row.appendChild(el('span', '', t.text));
+          list.appendChild(row);
+        });
+      }
+
+      // tomorrow's list (inputs)
+      var inputs = [1, 2, 3].map(function (n) { return document.getElementById('task-' + n); });
+      var existing = all[nKey] || [];
+      inputs.forEach(function (inp, i) {
+        if (existing[i]) inp.value = existing[i].text;
+        inp.addEventListener('input', function () {
+          var fresh = loadTasks();
+          var prev = fresh[nKey] || [];
+          var next = inputs.map(function (x, j) {
+            var text = x.value.trim();
+            var done = prev[j] && prev[j].text === text ? !!prev[j].done : false;
+            return { text: text, done: done };
+          });
+          if (next.some(function (t) { return t.text; })) fresh[nKey] = next;
+          else delete fresh[nKey];
+          saveTasks(fresh);
+        });
+      });
+    }
+
+    function showLockoutTasks() {
+      var box = document.getElementById('lockout-tasks');
+      if (!box) return;
+      box.innerHTML = '';
+      var tomorrow = (loadTasks()[tomorrowKey()] || []).filter(function (t) { return t.text; });
+      if (!tomorrow.length) return;
+      box.appendChild(el('h3', '', "Tomorrow's top 3"));
+      var ol = el('ol');
+      tomorrow.forEach(function (t) { ol.appendChild(el('li', '', t.text)); });
+      box.appendChild(ol);
+    }
+    initTasks();
+
     // ---------- 1. TIMER (timestamp based) ----------
     // Uses the real clock, so it stays correct when the phone sleeps or the tab is in the background.
     // The end time is saved, so reloading the page does NOT restart the 30 minutes.
@@ -299,6 +474,7 @@
         // stop any video that is still playing
         var frames = document.querySelectorAll('.player iframe');
         for (var i = 0; i < frames.length; i++) frames[i].remove();
+        showLockoutTasks();
         clearInterval(timerId);
       }
     }
@@ -306,22 +482,276 @@
     timerId = setInterval(tick, 1000);
     document.addEventListener('visibilitychange', tick);
 
-    // ---------- 2. PHYSICS FACT ----------
-    var deepPhysicsFacts = [
-      "Time passes slower at your feet than at your head because gravity warps spacetime. Einstein's General Relativity proves you are micro-seconds younger at your ankles!",
-      "Quantum Tunneling allows particles to pass through solid, impenetrable barriers. Without this subatomic quirk, our Sun couldn't fuse hydrogen, and life wouldn't exist.",
-      "The Cosmic Microwave Background is the literal afterglow of the Big Bang, filling all space. A small fraction of the static on an old analog TV was this ancient light.",
-      "A single teaspoon of a Neutron Star would weigh roughly 6 billion tons on Earth. They are the collapsed cores of massive stars, compressed to the size of a city.",
-      "Entangled particles share correlated states across light-years. Einstein called this 'spooky action at a distance', yet it can't be used to send information faster than light."
+    // ---------- 2. SCIENCE FACT (changes every 10 minutes) ----------
+    var scienceFacts = [
+      { cat: "Space", text: "Sunlight takes about 8 minutes to reach Earth, but the energy in the Sun's core takes thousands of years to work its way out to the surface. Estimates range from roughly 10,000 to 170,000 years." },
+      { cat: "Physics", text: "GPS satellites carry clocks that must be corrected for relativity. Without the correction, position errors would grow by roughly 10 kilometres every day." },
+      { cat: "Biology", text: "An octopus has three hearts and blue blood. Its blood carries oxygen with a copper-based molecule, hemocyanin, instead of the iron-based haemoglobin in ours." },
+      { cat: "Chemistry", text: "Honey is so low in water and so acidic that bacteria struggle to grow in it. Sealed honey has been found in ancient Egyptian tombs, thousands of years old." },
+      { cat: "Space", text: "One full spin of Venus takes about 243 Earth days, which is longer than its year of about 225 Earth days. A day there outlasts a year." },
+      { cat: "Biology", text: "If you stretched out the DNA from a single human cell it would be about two metres long, yet it fits inside a nucleus only micrometres wide." },
+      { cat: "Physics", text: "Water is densest at about 4 °C, and ice is less dense than liquid water. That is why ice floats and lakes freeze from the top down, leaving life alive below." },
+      { cat: "Physics", text: "Quantum tunnelling lets particles cross barriers they could not cross in classical physics. Without it, the Sun's core would not be hot enough for hydrogen nuclei to fuse." },
+      { cat: "Physics", text: "Sound travels about four times faster in water than in air: roughly 1,500 metres per second versus about 343." },
+      { cat: "Biology", text: "Most of a tree's mass comes from the air, not the soil. Trees build wood from carbon dioxide they take from the atmosphere through photosynthesis." },
+      { cat: "Physics", text: "A lightning bolt heats the air around it to roughly 30,000 °C, about five times hotter than the surface of the Sun." },
+      { cat: "Physics", text: "In the vacuum of space, two clean pieces of the same metal can stick together on contact because no air or oxide layer separates them. Engineers call it cold welding." },
+      { cat: "Space", text: "The leftover glow of the Big Bang, the cosmic microwave background, fills the whole sky. A small share of the static on old analog TVs was this ancient light." },
+      { cat: "Biology", text: "Mitochondria, the power plants of your cells, carry their own small piece of DNA, which you inherited almost entirely from your mother." },
+      { cat: "Space", text: "Jupiter's Great Red Spot is a storm wider than Earth that has been observed for well over a century, and it has been slowly shrinking." },
+      { cat: "Chemistry", text: "Experiments and models suggest it may 'rain' diamonds deep inside Neptune and Uranus, where carbon is squeezed under extreme pressure." },
+      { cat: "Biology", text: "Experiments suggest human eyes can sometimes respond to a single photon, the smallest packet of light, although the brain needs several before you consciously see a flash." },
+      { cat: "Space", text: "The Moon is drifting away from Earth by about 3.8 centimetres a year, roughly the speed at which fingernails grow." },
+      { cat: "Biology", text: "Tardigrades, also called water bears, have survived exposure to open space in experiments. They dry out and curl into a dormant state that tolerates extreme conditions." },
+      { cat: "Chemistry", text: "Most of the atoms in your body that are heavier than helium were made inside stars or in stellar explosions." },
+      { cat: "Physics", text: "Earth's rotation is slowing because of tidal friction. A day gets about 1.7 milliseconds longer every century." },
+      { cat: "Physics", text: "A superconductor can push magnetic fields out of itself, called the Meissner effect, which is how a magnet can float above one." },
+      { cat: "Biology", text: "Sharks are older than trees. The first sharks appeared roughly 450 million years ago, while the earliest forests appeared about 385 million years ago." },
+      { cat: "Space", text: "Martian sunsets look blue near the Sun, because fine dust in the thin atmosphere scatters blue light forward toward the viewer." },
+      { cat: "Physics", text: "Entangled particles show correlated measurements even when far apart, but this cannot be used to send a message faster than light." },
+      { cat: "Space", text: "A teaspoon of neutron-star material would weigh billions of tonnes on Earth. These stars squeeze more than the mass of the Sun into a ball about the size of a city." },
+      { cat: "Chemistry", text: "Bananas are very slightly radioactive because they contain potassium-40, but the dose is tiny and harmless." }
     ];
 
-    function showFact() {
-      var now = new Date();
-      var dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-      document.getElementById('physics-fact').textContent =
-        deepPhysicsFacts[dayOfYear % deepPhysicsFacts.length];
+    var ROTATE_MS = 10 * 60 * 1000;
+    var FACT_SLOTS = Math.round(DURATION_MS / ROTATE_MS);
+    // Each night starts at a different place in the list, and a session never repeats a fact.
+    var factStart = (dayNumberOf(todayKey()) * 13) % scienceFacts.length;
+    var shownSlot = -1;
+
+    function updateFact() {
+      var started = endTime - DURATION_MS;
+      var elapsed = Math.max(0, Date.now() - started);
+      var slot = Math.min(Math.floor(elapsed / ROTATE_MS), FACT_SLOTS - 1);
+
+      if (slot !== shownSlot) {
+        shownSlot = slot;
+        var f = scienceFacts[(factStart + slot) % scienceFacts.length];
+        var factEl = document.getElementById('physics-fact');
+        var catEl = document.getElementById('fact-cat');
+        factEl.textContent = f.text;
+        catEl.textContent = f.cat;
+        factEl.classList.remove('fade-in');
+        void factEl.offsetWidth;
+        factEl.classList.add('fade-in');
+      }
+
+      var meta = document.getElementById('fact-meta');
+      if (elapsed >= DURATION_MS) {
+        meta.textContent = 'Session over';
+      } else {
+        var untilNext = Math.ceil((ROTATE_MS - (elapsed % ROTATE_MS)) / 1000);
+        var m = Math.floor(untilNext / 60);
+        var sec = untilNext % 60;
+        meta.textContent = 'Fact ' + (slot + 1) + ' of ' + FACT_SLOTS + '  ·  next in ' + m + ':' + pad2(sec);
+      }
     }
-    showFact();
+    updateFact();
+    setInterval(updateFact, 1000);
+
+    // ---------- DAILY WORD (Wordle-style, one word per day) ----------
+    // Guesses are not checked against a dictionary: any 5 letters are accepted.
+    var WORDS = [
+      "teach", "vital", "clerk", "forth", "track", "angle", "coach", "month", "thank", "blood",
+      "human", "those", "waste", "metal", "bench", "chest", "close", "knife", "click", "brown",
+      "alone", "catch", "crown", "realm", "sword", "blank", "panel", "delay", "stage", "opera",
+      "table", "slice", "rigid", "stuff", "rural", "patch", "token", "bleed", "vivid", "pause",
+      "sixty", "stove", "bacon", "nerve", "shock", "party", "stick", "swift", "yacht", "crash",
+      "carry", "would", "every", "refer", "climb", "globe", "bride", "blast", "great", "enjoy",
+      "elite", "hello", "chase", "skill", "grain", "trace", "daily", "wheel", "react", "empty",
+      "count", "funny", "level", "fever", "cover", "floor", "share", "where", "scope", "movie",
+      "south", "glory", "issue", "sixth", "check", "never", "serve", "worth", "agree", "union",
+      "scene", "guard", "plain", "crowd", "chief", "mayor", "enemy", "proof", "young", "plane",
+      "dream", "order", "cream", "tenth", "twice", "quest", "spice", "begin", "route", "black",
+      "newly", "youth", "score", "space", "feast", "arrow", "light", "mercy", "still", "scale",
+      "frost", "fifty", "spine", "craft", "front", "fable", "water", "index", "dress", "sheet",
+      "range", "faith", "point", "fence", "wrong", "shell", "quite", "state", "stock", "tower",
+      "giant", "pride", "upper", "voice", "round", "board", "stair", "valid", "least", "cliff",
+      "couch", "guide", "spoke", "spare", "lemon", "smart", "jewel", "speed", "paint", "sugar",
+      "stood", "orbit", "album", "radar", "house", "bless", "given", "queen", "noise", "clear",
+      "until", "trend", "flame", "float", "boost", "minor", "avoid", "radio", "shape", "snake",
+      "solve", "laser", "bunch", "cross", "third", "exist", "visit", "trade", "sleep", "charm",
+      "river", "heart", "after", "trick", "uncle", "prize", "prime", "style", "alike", "grief",
+      "humor", "brain", "drink", "bring", "green", "stare", "found", "drive", "store", "drift",
+      "break", "focus", "treat", "again", "blame", "rapid", "grand", "eagle", "final", "drill",
+      "horse", "nurse", "hurry", "chalk", "image", "touch", "field", "tough", "label", "polar",
+      "grade", "maybe", "class", "candy", "false", "coast", "three", "mount", "brave", "tired",
+      "pearl", "there", "moral", "greet", "merit", "proud", "since", "thick", "lover", "alarm",
+      "whole", "crack", "shade", "cable", "unity", "kayak", "truth", "slide", "watch", "judge",
+      "cycle", "chair", "first", "might", "raise", "glass", "audio", "guess", "sense", "depth",
+      "peace", "cheer", "whose", "bread", "magic", "clock", "media", "think", "mango", "layer",
+      "chess", "right", "above", "minus", "about", "chain", "photo", "shine", "total", "split",
+      "along", "could", "shelf", "fifth", "shown", "wound", "steel", "brush", "cause", "noble",
+      "silly", "short", "trail", "fancy", "stand", "enter", "fault", "large", "sight", "paper",
+      "piano", "flood", "flash", "adult", "angry", "place", "blade", "robin", "value", "while",
+      "maker", "smoke", "grace", "story", "thumb", "equal", "olive", "shirt", "burst", "guest",
+      "aware", "shift", "logic", "outer", "bound", "onion", "labor", "super", "ratio", "brand",
+      "thing", "write", "offer", "punch", "exact", "width", "build", "virus", "plant", "sport",
+      "throw", "rider", "zebra", "phase", "blind", "crazy", "choir", "pasta", "award", "stamp",
+      "occur", "seven", "apple", "beach", "juice", "inner", "brief", "group", "child", "being",
+      "fresh", "today", "dance", "price", "alert", "speak", "salad", "tight", "cheap", "input",
+      "which", "lunch", "trial", "reach", "hotel", "below", "small", "extra", "earth", "tiger",
+      "pulse", "under", "honor", "limit", "sunny", "lucky", "juicy", "learn", "ready", "curve",
+      "civil", "force", "leave", "title", "trust", "other", "print", "broad", "storm", "ghost",
+      "death", "elbow", "claim", "honey", "staff", "swing", "topic", "relax", "liver", "press",
+      "solar", "money", "error", "quick", "grass", "mouth", "crime", "model", "robot", "stone",
+      "quote", "ivory", "reply", "pilot", "block", "color", "laugh", "truly", "knock", "heavy",
+      "phone", "rough", "birth", "quiet", "march", "tribe", "actor", "spend", "booth", "shore",
+      "cloud", "white", "train", "video", "major", "usual", "woman", "music", "weary", "steam",
+      "crush", "match", "grant", "legal", "truck", "owner", "strip", "sharp", "solid", "loose",
+      "harsh", "blend", "study", "linen", "motor", "often", "taste", "grape", "basic", "happy",
+      "joint", "forty", "frame", "risky", "steep", "ocean", "event", "novel", "rocky", "ridge",
+      "power", "suite", "brick", "jelly", "early", "eight", "meter", "mouse", "badge", "fight",
+      "royal", "aside", "plate", "lunar", "shake", "fruit", "sound", "flour", "tooth", "upset",
+      "fleet", "local", "smile", "habit", "pitch", "worry", "night", "theme", "chill", "north",
+      "cloth", "cabin", "crane", "later", "sweet", "urban", "start", "ideal", "clean", "world",
+      "weigh", "plaza", "court"
+    ];
+
+    var WORDLE_KEY = 'winddown_wordle_v1';
+    var WORDLE_STATS_KEY = 'winddown_wordle_stats_v1';
+    var wToday = dayNumberOf(todayKey());
+    var wAnswer = WORDS[wToday % WORDS.length];
+    var wState = { day: wToday, guesses: [], status: 'playing' };
+    var wStats = { streak: 0, lastWin: -1, played: 0, won: 0 };
+    var wCurrent = '';
+    var wKeys = {};
+
+    try {
+      var savedState = JSON.parse(localStorage.getItem(WORDLE_KEY));
+      if (savedState && savedState.day === wToday) wState = savedState;
+      var savedStats = JSON.parse(localStorage.getItem(WORDLE_STATS_KEY));
+      if (savedStats) wStats = savedStats;
+    } catch (e) {}
+
+    function saveWordle() {
+      try {
+        localStorage.setItem(WORDLE_KEY, JSON.stringify(wState));
+        localStorage.setItem(WORDLE_STATS_KEY, JSON.stringify(wStats));
+      } catch (e) {}
+    }
+
+    function evaluateGuess(guess, answer) {
+      var res = ['absent', 'absent', 'absent', 'absent', 'absent'];
+      var counts = {};
+      var i;
+      for (i = 0; i < 5; i++) {
+        if (guess[i] === answer[i]) res[i] = 'correct';
+        else counts[answer[i]] = (counts[answer[i]] || 0) + 1;
+      }
+      for (i = 0; i < 5; i++) {
+        if (res[i] === 'correct') continue;
+        if (counts[guess[i]] > 0) { res[i] = 'present'; counts[guess[i]]--; }
+      }
+      return res;
+    }
+
+    function setWordleMsg(text) {
+      document.getElementById('wordle-msg').textContent = text;
+    }
+
+    function wordleEndMessage() {
+      if (wState.status === 'won') return 'Solved in ' + wState.guesses.length + '/6 🎉 A new word arrives tomorrow.';
+      if (wState.status === 'lost') return 'The word was ' + wAnswer.toUpperCase() + '. A new word arrives tomorrow.';
+      return '';
+    }
+
+    function renderWordle() {
+      var board = document.getElementById('wordle-board');
+      board.innerHTML = '';
+      var rank = { absent: 1, present: 2, correct: 3 };
+      var best = {};
+
+      for (var r = 0; r < 6; r++) {
+        var row = el('div', 'w-row');
+        var g = wState.guesses[r];
+        var ev = g ? evaluateGuess(g, wAnswer) : null;
+        for (var c = 0; c < 5; c++) {
+          var letter = '';
+          if (g) letter = g[c];
+          else if (r === wState.guesses.length && wState.status === 'playing') letter = wCurrent[c] || '';
+          var cls = 'w-tile' + (ev ? ' ' + ev[c] : (letter ? ' filled' : ''));
+          row.appendChild(el('div', cls, letter));
+          if (ev && (!best[letter] || rank[ev[c]] > rank[best[letter]])) best[letter] = ev[c];
+        }
+        board.appendChild(row);
+      }
+
+      Object.keys(wKeys).forEach(function (k) {
+        wKeys[k].className = 'key' + (k.length > 1 ? ' wide' : '') + (best[k] ? ' ' + best[k] : '');
+      });
+
+      var shown = wStats.lastWin >= wToday - 1 ? wStats.streak : 0;
+      document.getElementById('wordle-streak').textContent = '🔥 ' + shown + ' day streak';
+    }
+
+    function handleWordleKey(k) {
+      if (wState.status !== 'playing') return;
+      if (k === 'Backspace') {
+        wCurrent = wCurrent.slice(0, -1);
+        setWordleMsg('');
+      } else if (k === 'Enter') {
+        if (wCurrent.length < 5) { setWordleMsg('Need 5 letters'); return; }
+        wState.guesses.push(wCurrent);
+        var guess = wCurrent;
+        wCurrent = '';
+        if (guess === wAnswer) {
+          wState.status = 'won';
+          wStats.streak = wStats.lastWin === wToday - 1 ? wStats.streak + 1 : 1;
+          wStats.lastWin = wToday;
+          wStats.played++;
+          wStats.won++;
+        } else if (wState.guesses.length >= 6) {
+          wState.status = 'lost';
+          wStats.streak = 0;
+          wStats.played++;
+        }
+        saveWordle();
+        setWordleMsg(wordleEndMessage());
+      } else if (/^[a-z]$/.test(k) && wCurrent.length < 5) {
+        wCurrent += k;
+        setWordleMsg('');
+      }
+      renderWordle();
+    }
+
+    function buildWordleKeyboard() {
+      var kb = document.getElementById('wordle-kb');
+      var rows = ['qwertyuiop', 'asdfghjkl', 'Enter zxcvbnm Backspace'];
+      rows.forEach(function (rowDef) {
+        var row = el('div', 'kb-row');
+        var keys = rowDef.indexOf(' ') > -1 ? rowDef.split(' ') : rowDef.split('');
+        var flat = [];
+        keys.forEach(function (k) {
+          if (k.length > 1 && k !== 'Enter' && k !== 'Backspace') k.split('').forEach(function (ch) { flat.push(ch); });
+          else flat.push(k);
+        });
+        flat.forEach(function (k) {
+          var btn = el('button', 'key', k === 'Backspace' ? '⌫' : k);
+          btn.type = 'button';
+          btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+          btn.addEventListener('click', function () { handleWordleKey(k); });
+          wKeys[k] = btn;
+          row.appendChild(btn);
+        });
+        kb.appendChild(row);
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (e.key === 'Enter' || e.key === 'Backspace') {
+        handleWordleKey(e.key);
+      } else if (e.key && e.key.length === 1) {
+        handleWordleKey(e.key.toLowerCase());
+      }
+    });
+
+    buildWordleKeyboard();
+    renderWordle();
+    setWordleMsg(wordleEndMessage());
 
     // ---------- 3. REDDIT ----------
     // Reddit blocks direct requests from a browser (CORS), so we go through public proxies,
